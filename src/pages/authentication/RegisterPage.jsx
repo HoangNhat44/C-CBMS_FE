@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./Auth.css";
+import authAPI from "../../services/auth.service";
 
 function getStrength(pw) {
   if (!pw) return 0;
@@ -45,36 +46,52 @@ function RegisterPage() {
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (!form.agree) {
-      setError("You must accept the terms to continue.");
-      return;
-    }
-    try {
-      setSubmitting(true);
-      setError("");
-      // TODO: call authAPI.register(form)
-      await new Promise((r) => setTimeout(r, 1000)); // placeholder
-      setSuccess("Account created! You can now sign in.");
-      setForm(initialForm);
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (form.password !== form.confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+  if (!form.agree) {
+    setError("You must accept the terms to continue.");
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    setError("");
+
+    const response = await authAPI.register({
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      phone: form.phone,
+      password: form.password,
+      confirmPassword: form.confirmPassword,
+    });
+
+    console.log(response.data);
+
+    setSuccess("Account created! You can now sign in.");
+    setForm(initialForm);
+
+  } catch (err) {
+    setError(
+      err.response?.data?.message ||
+      "Registration failed. Try again."
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="auth-shell">
       {/* ── Brand panel ── */}
       <aside className="auth-brand">
         <div className="auth-brand__logo">
-          <span className="auth-brand__logo-icon">🎬</span>
+          <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
           C-CBMS
         </div>
 
@@ -150,6 +167,7 @@ function RegisterPage() {
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="0900 000 000"
+                required
               />
             </label>
 

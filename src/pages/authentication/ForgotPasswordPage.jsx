@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./Auth.css";
+import authAPI from "../../services/auth.service";
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -12,8 +13,7 @@ function ForgotPasswordPage() {
     try {
       setSubmitting(true);
       setError("");
-      // TODO: call authAPI.forgotPassword({ email })
-      await new Promise((r) => setTimeout(r, 1000)); // placeholder
+      await authAPI.forgotPassword(email);
       setSent(true);
     } catch (err) {
       setError(err.response?.data?.message || "Could not send reset link. Try again.");
@@ -27,7 +27,7 @@ function ForgotPasswordPage() {
       {/* ── Brand panel ── */}
       <aside className="auth-brand">
         <div className="auth-brand__logo">
-          <span className="auth-brand__logo-icon">🎬</span>
+          <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
           C-CBMS
         </div>
 

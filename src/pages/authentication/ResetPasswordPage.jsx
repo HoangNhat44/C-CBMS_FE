@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./Auth.css";
+import authAPI from "../../services/auth.service";
 
 function getStrength(pw) {
   if (!pw) return 0;
@@ -20,7 +21,7 @@ const STRENGTH_META = [
 ];
 
 function ResetPasswordPage() {
-  // In a real app, the token comes from the URL: useParams() / useSearchParams()
+  const token = new URLSearchParams(window.location.search).get("token") || "";
   const [form, setForm] = useState({ password: "", confirmPassword: "" });
   const [showPw, setShowPw] = useState(false);
   const [showCpw, setShowCpw] = useState(false);
@@ -49,8 +50,7 @@ function ResetPasswordPage() {
     try {
       setSubmitting(true);
       setError("");
-      // TODO: call authAPI.resetPassword({ token, password: form.password })
-      await new Promise((r) => setTimeout(r, 1000)); // placeholder
+      await authAPI.resetPassword(token, form.password, form.confirmPassword);
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.message || "Reset failed. The link may have expired.");
@@ -64,7 +64,7 @@ function ResetPasswordPage() {
       {/* ── Brand panel ── */}
       <aside className="auth-brand">
         <div className="auth-brand__logo">
-          <span className="auth-brand__logo-icon">🎬</span>
+          <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
           C-CBMS
         </div>
 

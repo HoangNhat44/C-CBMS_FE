@@ -4,6 +4,8 @@ import RegisterPage from "./pages/authentication/RegisterPage";
 import ForgotPasswordPage from "./pages/authentication/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/authentication/ResetPasswordPage";
 import UsersPage from "./pages/account/UsersPage";
+import OwnerDashboard from "./pages/dashboard/Owner";
+import StaffDashboard from "./pages/dashboard/Staff";
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+        <Route path="/staff-dashboard" element={<StaffDashboard />} />
       </Routes>
     </BrowserRouter>
   );

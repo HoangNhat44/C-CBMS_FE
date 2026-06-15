@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./Auth.css";
-
+import authAPI from "../../services/auth.service";
 function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPassword, setShowPassword] = useState(false);
@@ -12,26 +12,39 @@ function LoginPage() {
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setSubmitting(true);
-      setError("");
-      // TODO: call authAPI.login(form)
-      await new Promise((r) => setTimeout(r, 1000)); // placeholder
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Check your credentials.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    setSubmitting(true);
+    setError("");
+
+    const response = await authAPI.login(form.email, form.password);
+
+    console.log(response.data);
+
+    localStorage.setItem(
+      "token",
+      response.data.data.token
+    );
+
+  } catch (err) {
+    setError(
+      err.response?.data?.message ||
+      "Login failed"
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="auth-shell">
       {/* ── Brand panel ── */}
       <aside className="auth-brand">
         <div className="auth-brand__logo">
-          <span className="auth-brand__logo-icon">🎬</span>
+          <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
           C-CBMS
         </div>
 

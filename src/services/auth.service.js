@@ -2,12 +2,24 @@ import apiClient from './apiClient';
 
 const authAPI = {
   // Login
-  login: (email, password) => 
+  login: (email, password) =>
     apiClient.post('/auth/login', { email, password }),
 
   // Register
-  register: (data) => 
+  register: (data) =>
     apiClient.post('/auth/register', data),
+
+  // Forgot password
+  forgotPassword: (email) =>
+    apiClient.post('/auth/forgot-password', { email }),
+
+  // Reset password
+  resetPassword: (token, password, confirmPassword) =>
+    apiClient.post('/auth/reset-password', {
+      token,
+      password,
+      confirmPassword,
+    }),
 
   // Logout
   logout: () => {
@@ -16,7 +28,7 @@ const authAPI = {
   },
 
   // Verify token
-  verifyToken: () => 
+  verifyToken: () =>
     apiClient.get('/auth/verify'),
 };
 

@@ -49,14 +49,11 @@
 }
 
 .auth-brand__logo-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  background: rgba(255, 255, 255, 0.18);
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
   border-radius: 10px;
-  font-size: 1.1rem;
+  background: #ffffff;
 }
 
 .auth-brand__copy {
