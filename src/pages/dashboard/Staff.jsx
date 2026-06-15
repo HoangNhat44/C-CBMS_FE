@@ -75,10 +75,9 @@ export default function StaffDashboard() {
       {/* ── SIDEBAR ── */}
       <aside className="sb">
         <div className="sb-brand">
-          <div className="sb-logo">CC</div>
-          <div>
-            <div className="sb-brand-text">C-CBMS</div>
-            <div className="sb-brand-sub">Staff portal</div>
+          <div className="auth-brand__logo">
+            <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
+            C-CBMS
           </div>
         </div>
 

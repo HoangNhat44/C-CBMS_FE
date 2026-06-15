@@ -6,6 +6,8 @@ import ResetPasswordPage from "./pages/authentication/ResetPasswordPage";
 import UsersPage from "./pages/account/UsersPage";
 import OwnerDashboard from "./pages/dashboard/Owner";
 import StaffDashboard from "./pages/dashboard/Staff";
+import AdminDashboard from "./pages/dashboard/Admin";
+import LandingPage from "./pages/dashboard/Landingpage";
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
         <Route path="/users" element={<UsersPage />} />
         <Route path="/owner-dashboard" element={<OwnerDashboard />} />
         <Route path="/staff-dashboard" element={<StaffDashboard />} />
+        <Route path="/landing-dashboard" element={<LandingPage />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   );
