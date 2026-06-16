@@ -61,7 +61,7 @@ export default function Header() {
     <nav className="nav">
       <div className="nav-inner">
         <div className="nav-brand">
-          <div className="auth-brand__logo" style={{ cursor: "pointer" }} onClick={() => navigate("/")}>
+          <div className="auth-brand__logo" style={{ cursor: "pointer" }} onClick={() => navigate("/landing-dashboard")}>
             <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
             C-CBMS
           </div>

@@ -142,7 +142,13 @@ export default function OwnerDashboard() {
   return (
     <div className="dash">
       {/* ── SIDEBAR ── */}
-      <Sidebar menuItems={menuItems} active={active} setActive={setActive} handleLogout={handleLogout} />
+      <Sidebar 
+        menuItems={menuItems} 
+        active={active} 
+        setActive={setActive} 
+        handleLogout={handleLogout} 
+        onLogoClick={() => navigate("/owner-dashboard")}
+      />
 
       {/* ── MAIN ── */}
       <div className="main">

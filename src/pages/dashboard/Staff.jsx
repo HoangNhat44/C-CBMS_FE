@@ -128,7 +128,13 @@ export default function StaffDashboard() {
     <div className="dash dash--staff">
 
       {/* ── SIDEBAR ── */}
-      <Sidebar menuItems={menuItems} active={active} setActive={setActive} handleLogout={handleLogout} />
+      <Sidebar 
+        menuItems={menuItems} 
+        active={active} 
+        setActive={setActive} 
+        handleLogout={handleLogout} 
+        onLogoClick={() => navigate("/staff-dashboard")}
+      />
 
       {/* ── MAIN ── */}
       <div className="main">

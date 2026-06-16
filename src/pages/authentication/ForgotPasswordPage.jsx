@@ -16,7 +16,7 @@ function ForgotPasswordPage() {
       await authAPI.forgotPassword(email);
       setSent(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Could not send reset link. Try again.");
+      setError(err.response?.data?.message || "Không thể gửi liên kết đặt lại. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -32,27 +32,26 @@ function ForgotPasswordPage() {
         </div>
 
         <div className="auth-brand__copy">
-          <span className="auth-brand__eyebrow">Account recovery</span>
+          <span className="auth-brand__eyebrow">Khôi phục tài khoản</span>
           <h2 className="auth-brand__headline">
-            Locked out?<br />We've got you.
+            Quên mật khẩu?<br />Đã có chúng tôi.
           </h2>
           <p className="auth-brand__desc">
-            Enter your registered email and we'll send a secure reset link
-            straight to your inbox. It expires in 15 minutes.
+            Nhập email đã đăng ký của bạn và chúng tôi sẽ gửi liên kết đặt lại an toàn tới hộp thư của bạn. Liên kết có hiệu lực trong 15 phút.
           </p>
         </div>
 
         <ul className="auth-brand__features">
-          <li>Link expires after 15 minutes</li>
-          <li>One-time use only</li>
-          <li>Sent to your registered email</li>
+          <li>Liên kết hết hạn sau 15 phút</li>
+          <li>Chỉ sử dụng được một lần</li>
+          <li>Gửi tới email đã đăng ký của bạn</li>
         </ul>
       </aside>
 
       {/* ── Form panel ── */}
       <main className="auth-panel">
         <div className="auth-card">
-          <a href="/login" className="auth-back">← Back to sign in</a>
+          <a href="/login" className="auth-back">← Quay lại đăng nhập</a>
 
           {/* Step indicator */}
           <div className="auth-steps">
@@ -62,25 +61,25 @@ function ForgotPasswordPage() {
             </div>
             <div className="auth-steps__item">
               <span className="auth-steps__dot">2</span>
-              <span className="auth-steps__text">Verify</span>
+              <span className="auth-steps__text">Xác thực</span>
             </div>
             <div className="auth-steps__item">
               <span className="auth-steps__dot">3</span>
-              <span className="auth-steps__text">Reset</span>
+              <span className="auth-steps__text">Đặt lại</span>
             </div>
           </div>
 
-          <span className="auth-card__eyebrow">Forgot password</span>
-          <h1>Reset your password</h1>
+          <span className="auth-card__eyebrow">Quên mật khẩu</span>
+          <h1>Đặt lại mật khẩu</h1>
           <p className="auth-card__subtitle">
-            We'll email you a link to create a new password.
+            Chúng tôi sẽ gửi cho bạn một liên kết để tạo mật khẩu mới.
           </p>
 
           {sent ? (
             <div style={{ display: "grid", gap: 16, marginTop: 8 }}>
               <p className="auth-success">
-                ✉️ Reset link sent to <strong>{email}</strong>. Check your inbox
-                (and spam folder).
+                ✉️ Liên kết đặt lại đã được gửi tới <strong>{email}</strong>. Vui lòng kiểm tra hộp thư
+                (và cả thư mục rác).
               </p>
               <button
                 className="auth-form__submit"
@@ -88,13 +87,13 @@ function ForgotPasswordPage() {
                 onClick={() => { setSent(false); setEmail(""); }}
                 style={{ marginTop: 0 }}
               >
-                Send to a different email
+                Gửi tới một email khác
               </button>
             </div>
           ) : (
             <form className="auth-form" onSubmit={handleSubmit}>
               <label>
-                Registered email
+                Email đã đăng ký
                 <input
                   type="email"
                   name="email"
@@ -113,13 +112,13 @@ function ForgotPasswordPage() {
                 type="submit"
                 disabled={submitting}
               >
-                {submitting ? "Sending link…" : "Send reset link"}
+                {submitting ? "Đang gửi liên kết…" : "Gửi liên kết đặt lại"}
               </button>
             </form>
           )}
 
           <p className="auth-card__footer">
-            Remembered it? <a href="/login">Sign in instead</a>
+            Đã nhớ ra mật khẩu? <a href="/login">Đăng nhập ngay</a>
           </p>
         </div>
       </main>

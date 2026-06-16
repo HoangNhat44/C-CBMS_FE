@@ -14,10 +14,10 @@ function getStrength(pw) {
 
 const STRENGTH_META = [
   null,
-  { label: "Weak", cls: "weak" },
-  { label: "Fair", cls: "fair" },
-  { label: "Good", cls: "good" },
-  { label: "Strong", cls: "strong" },
+  { label: "Yếu", cls: "weak" },
+  { label: "Trung bình", cls: "fair" },
+  { label: "Tốt", cls: "good" },
+  { label: "Mạnh", cls: "strong" },
 ];
 
 function ResetPasswordPage() {
@@ -40,11 +40,11 @@ function ResetPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Mật khẩu không khớp.");
       return;
     }
     if (strength < 2) {
-      setError("Choose a stronger password before continuing.");
+      setError("Hãy chọn một mật khẩu mạnh hơn để tiếp tục.");
       return;
     }
     try {
@@ -53,7 +53,7 @@ function ResetPasswordPage() {
       await authAPI.resetPassword(token, form.password, form.confirmPassword);
       setDone(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Reset failed. The link may have expired.");
+      setError(err.response?.data?.message || "Đặt lại thất bại. Liên kết có thể đã hết hạn.");
     } finally {
       setSubmitting(false);
     }
@@ -69,27 +69,26 @@ function ResetPasswordPage() {
         </div>
 
         <div className="auth-brand__copy">
-          <span className="auth-brand__eyebrow">Account recovery</span>
+          <span className="auth-brand__eyebrow">Khôi phục tài khoản</span>
           <h2 className="auth-brand__headline">
-            Almost there —<br />set a new password.
+            Sắp xong rồi —<br />đặt mật khẩu mới.
           </h2>
           <p className="auth-brand__desc">
-            Pick something you haven't used before. A strong password keeps your
-            booking data and customer records safe.
+            Hãy chọn một mật khẩu bạn chưa từng sử dụng trước đây. Một mật khẩu mạnh giúp giữ an toàn cho dữ liệu đặt bàn và thông tin khách hàng.
           </p>
         </div>
 
         <ul className="auth-brand__features">
-          <li>At least 8 characters</li>
-          <li>Mix uppercase, numbers & symbols</li>
-          <li>Don't reuse recent passwords</li>
+          <li>Ít nhất 8 ký tự</li>
+          <li>Kết hợp chữ hoa, chữ thường, số & ký tự đặc biệt</li>
+          <li>Không sử dụng lại mật khẩu cũ gần đây</li>
         </ul>
       </aside>
 
       {/* ── Form panel ── */}
       <main className="auth-panel">
         <div className="auth-card">
-          <a href="/forgot-password" className="auth-back">← Back</a>
+          <a href="/forgot-password" className="auth-back">← Quay lại</a>
 
           {/* Step indicator */}
           <div className="auth-steps">
@@ -99,24 +98,24 @@ function ResetPasswordPage() {
             </div>
             <div className="auth-steps__item auth-steps__item--done">
               <span className="auth-steps__dot">✓</span>
-              <span className="auth-steps__text">Verify</span>
+              <span className="auth-steps__text">Xác thực</span>
             </div>
             <div className={`auth-steps__item${done ? " auth-steps__item--done" : " auth-steps__item--active"}`}>
               <span className="auth-steps__dot">{done ? "✓" : "3"}</span>
-              <span className="auth-steps__text">Reset</span>
+              <span className="auth-steps__text">Đặt lại</span>
             </div>
           </div>
 
-          <span className="auth-card__eyebrow">New password</span>
-          <h1>Choose a password</h1>
+          <span className="auth-card__eyebrow">Mật khẩu mới</span>
+          <h1>Chọn mật khẩu</h1>
           <p className="auth-card__subtitle">
-            Your new password must differ from any you've used before.
+            Mật khẩu mới của bạn phải khác với những mật khẩu đã dùng trước đây.
           </p>
 
           {done ? (
             <div style={{ display: "grid", gap: 16 }}>
               <p className="auth-success">
-                🎉 Password updated successfully! You can now sign in with your new credentials.
+                🎉 Cập nhật mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.
               </p>
               <a
                 href="/login"
@@ -126,20 +125,20 @@ function ResetPasswordPage() {
                   textDecoration: "none", marginTop: 0,
                 }}
               >
-                Go to sign in
+                Chuyển đến trang đăng nhập
               </a>
             </div>
           ) : (
             <form className="auth-form" onSubmit={handleSubmit}>
               <label>
-                New password
+                Mật khẩu mới
                 <div className="auth-form__password-wrap">
                   <input
                     name="password"
                     type={showPw ? "text" : "password"}
                     value={form.password}
                     onChange={handleChange}
-                    placeholder="Min. 8 characters"
+                    placeholder="Tối thiểu 8 ký tự"
                     required
                     autoComplete="new-password"
                   />
@@ -147,7 +146,7 @@ function ResetPasswordPage() {
                     type="button"
                     className="auth-form__eye"
                     onClick={() => setShowPw((v) => !v)}
-                    aria-label={showPw ? "Hide" : "Show"}
+                    aria-label={showPw ? "Ẩn" : "Hiện"}
                   >
                     {showPw ? "🙈" : "👁"}
                   </button>
@@ -167,20 +166,20 @@ function ResetPasswordPage() {
                     ))}
                   </div>
                   <span className="auth-strength__label">
-                    Strength: {meta?.label || "—"}
+                    Độ mạnh: {meta?.label || "—"}
                   </span>
                 </div>
               )}
 
               <label>
-                Confirm new password
+                Xác nhận mật khẩu mới
                 <div className="auth-form__password-wrap">
                   <input
                     name="confirmPassword"
                     type={showCpw ? "text" : "password"}
                     value={form.confirmPassword}
                     onChange={handleChange}
-                    placeholder="Repeat your new password"
+                    placeholder="Nhập lại mật khẩu mới"
                     required
                     autoComplete="new-password"
                   />
@@ -188,7 +187,7 @@ function ResetPasswordPage() {
                     type="button"
                     className="auth-form__eye"
                     onClick={() => setShowCpw((v) => !v)}
-                    aria-label={showCpw ? "Hide" : "Show"}
+                    aria-label={showCpw ? "Ẩn" : "Hiện"}
                   >
                     {showCpw ? "🙈" : "👁"}
                   </button>
@@ -197,7 +196,7 @@ function ResetPasswordPage() {
 
               {form.confirmPassword && form.password !== form.confirmPassword && (
                 <p className="auth-error" style={{ margin: 0 }}>
-                  Passwords don't match yet.
+                  Mật khẩu chưa khớp.
                 </p>
               )}
 
@@ -208,7 +207,7 @@ function ResetPasswordPage() {
                 type="submit"
                 disabled={submitting}
               >
-                {submitting ? "Saving…" : "Save new password"}
+                {submitting ? "Đang lưu…" : "Lưu mật khẩu mới"}
               </button>
             </form>
           )}

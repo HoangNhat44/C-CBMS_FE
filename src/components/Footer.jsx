@@ -56,10 +56,10 @@ export default function Footer() {
       </div>
       
       <div style={{ maxWidth: 1280, margin: "48px auto 0", paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-        <div>&copy; {new Date().getFullYear()} C-CBMS. All rights reserved.</div>
+        <div>&copy; {new Date().getFullYear()} C-CBMS. Bản quyền đã được bảo hộ.</div>
         <div style={{ display: "flex", gap: 16 }}>
-          <a href="#" style={{ color: "inherit", textDecoration: "none" }}>Privacy</a>
-          <a href="#" style={{ color: "inherit", textDecoration: "none" }}>Terms</a>
+          <a href="#" style={{ color: "inherit", textDecoration: "none" }}>Quyền riêng tư</a>
+          <a href="#" style={{ color: "inherit", textDecoration: "none" }}>Điều khoản</a>
         </div>
       </div>
     </footer>

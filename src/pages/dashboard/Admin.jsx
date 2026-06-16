@@ -168,7 +168,13 @@ export default function AdminDashboard() {
     <div className="dash dash--admin">
 
       {/* ── SIDEBAR ── */}
-      <Sidebar menuItems={menuItems} active={active} setActive={setActive} handleLogout={handleLogout} />
+      <Sidebar 
+        menuItems={menuItems} 
+        active={active} 
+        setActive={setActive} 
+        handleLogout={handleLogout} 
+        onLogoClick={() => navigate("/admin-dashboard")}
+      />
 
       {/* ── MAIN ── */}
       <div className="main">

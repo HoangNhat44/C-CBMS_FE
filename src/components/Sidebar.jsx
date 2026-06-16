@@ -1,10 +1,10 @@
 import React from 'react';
 
-export default function Sidebar({ menuItems, active, setActive, handleLogout }) {
+export default function Sidebar({ menuItems, active, setActive, handleLogout, onLogoClick }) {
   return (
     <aside className="sb">
       <div className="sb-brand">
-        <div className="auth-brand__logo" style={{ color: "#ffffff" }}>
+        <div className="auth-brand__logo" style={{ color: "#ffffff", cursor: "pointer" }} onClick={onLogoClick}>
           <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
           C-CBMS
         </div>

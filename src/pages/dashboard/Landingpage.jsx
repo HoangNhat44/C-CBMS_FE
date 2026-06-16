@@ -69,59 +69,13 @@ export default function LandingPage() {
             className="hero-img"
           />
           <div className="hero-img-overlay">
-            <span>FOCUS</span>
-            <span>CREATE</span>
-            <span>INSPIRE</span>
+            <span>TẬP TRUNG</span>
+            <span>SÁNG TẠO</span>
+            <span>TRUYỀN CẢM HỨNG</span>
           </div>
         </div>
       </section>
 
-      {/* ── SEARCH BAR ── */}
-      <div className="search-wrap">
-        <div className="search-bar">
-          <div className="search-field">
-            <label className="sf-label">Chọn ngày</label>
-            <div className="sf-row">
-              <input className="sf-input" value={date} onChange={e => setDate(e.target.value)} />
-              <i className="ti ti-calendar sf-icon" aria-hidden="true" />
-            </div>
-          </div>
-          <div className="search-divider" />
-          <div className="search-field">
-            <label className="sf-label">Khung giờ</label>
-            <div className="sf-row">
-              <select className="sf-input sf-select" value={slot} onChange={e => setSlot(e.target.value)}>
-                {timeSlots.map(s => <option key={s}>{s}</option>)}
-              </select>
-              <i className="ti ti-clock sf-icon" aria-hidden="true" />
-            </div>
-          </div>
-          <div className="search-divider" />
-          <div className="search-field">
-            <label className="sf-label">Số người</label>
-            <div className="sf-row">
-              <select className="sf-input sf-select" value={people} onChange={e => setPeople(e.target.value)}>
-                {["1 người","2 người","3 người","4 người","5 người","6+ người"].map(p => <option key={p}>{p}</option>)}
-              </select>
-              <i className="ti ti-users sf-icon" aria-hidden="true" />
-            </div>
-          </div>
-          <div className="search-divider" />
-          <div className="search-field">
-            <label className="sf-label">Loại phòng</label>
-            <div className="sf-row">
-              <select className="sf-input sf-select" value={type} onChange={e => setType(e.target.value)}>
-                {["Tất cả","VIP","Premium","Thường","Nhóm nhỏ"].map(t => <option key={t}>{t}</option>)}
-              </select>
-              <i className="ti ti-building-estate sf-icon" aria-hidden="true" />
-            </div>
-          </div>
-          <button className="btn-search">
-            <i className="ti ti-search" aria-hidden="true" />
-            Tìm phòng
-          </button>
-        </div>
-      </div>
 
       {/* ── FEATURE STRIP ── */}
       <section className="feature-strip">
@@ -164,23 +118,6 @@ export default function LandingPage() {
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ── CTA BANNER ── */}
-      <section className="cta-banner">
-        <div className="cta-inner">
-          <div className="cta-left">
-            <i className="ti ti-tag cta-icon" aria-hidden="true" />
-            <div>
-              <div className="cta-title">Ưu đãi dành riêng cho thành viên</div>
-              <div className="cta-desc">Đăng ký tài khoản để nhận nhiều ưu đãi và tích điểm hấp dẫn!</div>
-            </div>
-          </div>
-          <button className="btn-cta" onClick={() => navigate("/register")}>
-            <i className="ti ti-user-plus" aria-hidden="true" />
-            Đăng ký ngay
-          </button>
         </div>
       </section>
 

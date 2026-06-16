@@ -14,10 +14,10 @@ function getStrength(pw) {
 
 const STRENGTH_META = [
   null,
-  { label: "Weak", cls: "weak" },
-  { label: "Fair", cls: "fair" },
-  { label: "Good", cls: "good" },
-  { label: "Strong", cls: "strong" },
+  { label: "Yếu", cls: "weak" },
+  { label: "Trung bình", cls: "fair" },
+  { label: "Tốt", cls: "good" },
+  { label: "Mạnh", cls: "strong" },
 ];
 
 const initialForm = {
@@ -50,11 +50,11 @@ const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (form.password !== form.confirmPassword) {
-    setError("Passwords do not match.");
+    setError("Mật khẩu không khớp.");
     return;
   }
   if (!form.agree) {
-    setError("You must accept the terms to continue.");
+    setError("Bạn phải đồng ý với các điều khoản để tiếp tục.");
     return;
   }
 
@@ -73,13 +73,13 @@ const handleSubmit = async (e) => {
 
     console.log(response.data);
 
-    setSuccess("Account created! You can now sign in.");
+    setSuccess("Tạo tài khoản thành công! Bạn có thể chờ duyệt và đăng nhập.");
     setForm(initialForm);
 
   } catch (err) {
     setError(
       err.response?.data?.message ||
-      "Registration failed. Try again."
+      "Đăng ký thất bại. Vui lòng thử lại."
     );
   } finally {
     setSubmitting(false);
@@ -96,52 +96,51 @@ const handleSubmit = async (e) => {
         </div>
 
         <div className="auth-brand__copy">
-          <span className="auth-brand__eyebrow">New here?</span>
+          <span className="auth-brand__eyebrow">Lần đầu đến đây?</span>
           <h2 className="auth-brand__headline">
-            Create your<br />admin account.
+            Tạo tài khoản<br />mới.
           </h2>
           <p className="auth-brand__desc">
-            Get access to booking management, customer records, and full
-            reporting tools in under a minute.
+            Truy cập quản lý đặt bàn, thông tin khách hàng và công cụ báo cáo đầy đủ chỉ trong chốc lát.
           </p>
         </div>
 
         <ul className="auth-brand__features">
-          <li>Free to set up, no card required</li>
-          <li>Role-based permission system</li>
-          <li>Instant access after approval</li>
-          <li>24/7 audit-ready activity logs</li>
+          <li>Thiết lập hoàn toàn miễn phí</li>
+          <li>Hệ thống phân quyền theo vai trò</li>
+          <li>Truy cập ngay sau khi được duyệt</li>
+          <li>Lưu trữ nhật ký hoạt động đầy đủ</li>
         </ul>
       </aside>
 
       {/* ── Form panel ── */}
       <main className="auth-panel">
         <div className="auth-card">
-          <span className="auth-card__eyebrow">Admin Portal</span>
-          <h1>Create account</h1>
+          <span className="auth-card__eyebrow">Cổng Quản Trị</span>
+          <h1>Tạo tài khoản</h1>
           <p className="auth-card__subtitle">
-            Fill in your details to request admin access.
+            Điền thông tin của bạn để đăng ký tài khoản.
           </p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-form__row">
               <label>
-                First name
+                Họ
                 <input
                   name="firstName"
                   value={form.firstName}
                   onChange={handleChange}
-                  placeholder="Nguyen"
+                  placeholder="Nguyễn"
                   required
                 />
               </label>
               <label>
-                Last name
+                Tên
                 <input
                   name="lastName"
                   value={form.lastName}
                   onChange={handleChange}
-                  placeholder="Van A"
+                  placeholder="Văn A"
                   required
                 />
               </label>
@@ -161,7 +160,7 @@ const handleSubmit = async (e) => {
             </label>
 
             <label>
-              Phone
+              Số điện thoại
               <input
                 name="phone"
                 value={form.phone}
@@ -172,14 +171,14 @@ const handleSubmit = async (e) => {
             </label>
 
             <label>
-              Password
+              Mật khẩu
               <div className="auth-form__password-wrap">
                 <input
                   name="password"
                   type={showPw ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Min. 8 characters"
+                  placeholder="Tối thiểu 8 ký tự"
                   required
                   autoComplete="new-password"
                 />
@@ -187,7 +186,7 @@ const handleSubmit = async (e) => {
                   type="button"
                   className="auth-form__eye"
                   onClick={() => setShowPw((v) => !v)}
-                  aria-label={showPw ? "Hide" : "Show"}
+                  aria-label={showPw ? "Ẩn" : "Hiện"}
                 >
                   {showPw ? "🙈" : "👁"}
                 </button>
@@ -207,20 +206,20 @@ const handleSubmit = async (e) => {
                   ))}
                 </div>
                 <span className="auth-strength__label">
-                  Strength: {meta?.label || "—"}
+                  Độ mạnh: {meta?.label || "—"}
                 </span>
               </div>
             )}
 
             <label>
-              Confirm password
+              Xác nhận mật khẩu
               <div className="auth-form__password-wrap">
                 <input
                   name="confirmPassword"
                   type={showCpw ? "text" : "password"}
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  placeholder="Repeat your password"
+                  placeholder="Nhập lại mật khẩu"
                   required
                   autoComplete="new-password"
                 />
@@ -228,7 +227,7 @@ const handleSubmit = async (e) => {
                   type="button"
                   className="auth-form__eye"
                   onClick={() => setShowCpw((v) => !v)}
-                  aria-label={showCpw ? "Hide" : "Show"}
+                  aria-label={showCpw ? "Ẩn" : "Hiện"}
                 >
                   {showCpw ? "🙈" : "👁"}
                 </button>
@@ -242,9 +241,9 @@ const handleSubmit = async (e) => {
                 checked={form.agree}
                 onChange={handleChange}
               />
-              I agree to the{" "}
+              Tôi đồng ý với{" "}
               <a href="/terms" style={{ color: "#0f766e", fontWeight: 700 }}>
-                Terms of Service
+                Điều khoản dịch vụ
               </a>
             </label>
 
@@ -252,12 +251,12 @@ const handleSubmit = async (e) => {
             {success && <p className="auth-success">{success}</p>}
 
             <button className="auth-form__submit" type="submit" disabled={submitting}>
-              {submitting ? "Creating account…" : "Create account"}
+              {submitting ? "Đang tạo tài khoản…" : "Tạo tài khoản"}
             </button>
           </form>
 
           <p className="auth-card__footer">
-            Already have an account? <a href="/login">Sign in</a>
+            Đã có tài khoản? <a href="/login">Đăng nhập</a>
           </p>
         </div>
       </main>

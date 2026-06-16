@@ -59,31 +59,31 @@ function LoginPage() {
         </div>
 
         <div className="auth-brand__copy">
-          <span className="auth-brand__eyebrow">Café & Cinema Platform</span>
+          <span className="auth-brand__eyebrow">Nền tảng Cà phê & Điện ảnh</span>
           <h2 className="auth-brand__headline">
-            Bookings, orders,<br />one dashboard.
+            Đặt phòng, dịch vụ,<br />quản lý tập trung.
           </h2>
           <p className="auth-brand__desc">
-            Manage café reservations, cinema seats, and customer records from a
-            single admin interface.
+            Quản lý đặt bàn cà phê, phòng chiếu phim và thông tin khách hàng từ
+            một giao diện quản trị duy nhất.
           </p>
         </div>
 
         <ul className="auth-brand__features">
-          <li>Real-time seat availability</li>
-          <li>Unified customer accounts</li>
-          <li>Role-based access control</li>
-          <li>Revenue & booking reports</li>
+          <li>Cập nhật trạng thái phòng theo thời gian thực</li>
+          <li>Đồng bộ tài khoản khách hàng</li>
+          <li>Phân quyền truy cập theo vai trò</li>
+          <li>Báo cáo doanh thu & lịch sử đặt phòng</li>
         </ul>
       </aside>
 
       {/* ── Form panel ── */}
       <main className="auth-panel">
         <div className="auth-card">
-          <span className="auth-card__eyebrow">Admin Portal</span>
-          <h1>Sign in</h1>
+          <span className="auth-card__eyebrow">Cổng Quản Trị</span>
+          <h1>Đăng nhập</h1>
           <p className="auth-card__subtitle">
-            Enter your credentials to access the dashboard.
+            Nhập thông tin xác thực của bạn để truy cập hệ thống.
           </p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
@@ -101,7 +101,7 @@ function LoginPage() {
             </label>
 
             <label>
-              Password
+              Mật khẩu
               <div className="auth-form__password-wrap">
                 <input
                   name="password"
@@ -116,7 +116,7 @@ function LoginPage() {
                   type="button"
                   className="auth-form__eye"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                 >
                   {showPassword ? "🙈" : "👁"}
                 </button>
@@ -131,23 +131,23 @@ function LoginPage() {
                   checked={form.remember}
                   onChange={handleChange}
                 />
-                Remember me
+                Ghi nhớ đăng nhập
               </label>
               <a href="/forgot-password" className="auth-form__forgot">
-                Forgot password?
+                Quên mật khẩu?
               </a>
             </div>
 
             {error && <p className="auth-error">{error}</p>}
 
             <button className="auth-form__submit" type="submit" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
+              {submitting ? "Đang đăng nhập…" : "Đăng nhập"}
             </button>
           </form>
 
           <p className="auth-card__footer">
-            Don't have an account?{" "}
-            <a href="/register">Create one</a>
+            Chưa có tài khoản?{" "}
+            <a href="/register">Tạo ngay</a>
           </p>
         </div>
       </main>
