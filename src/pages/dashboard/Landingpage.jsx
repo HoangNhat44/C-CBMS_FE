@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
+import Header from "../../components/Header";
+import Footer from "../../components/Footer";
 
 const rooms = [
   { tag: "VIP",      tagClass: "tag-vip",      name: "Phòng VIP",       people: "2 - 4 người", area: "20 - 30m²", price: "150.000₫/giờ", img: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&q=80" },
@@ -24,36 +27,15 @@ const highlights = [
 const timeSlots = ["08:00 - 10:00", "10:00 - 12:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00", "19:00 - 21:00"];
 
 export default function LandingPage() {
-  const [date, setDate]     = useState("16/06/2025");
-  const [slot, setSlot]     = useState("10:00 - 12:00");
-  const [people, setPeople] = useState("2 người");
-  const [type, setType]     = useState("Tất cả");
+  const [date, setDate]         = useState("16/06/2025");
+  const [slot, setSlot]         = useState("10:00 - 12:00");
+  const [people, setPeople]     = useState("2 người");
+  const [type, setType]         = useState("Tất cả");
+  const navigate                = useNavigate();
 
   return (
     <div className="lp">
-
-      {/* ── NAV ── */}
-      <nav className="nav">
-        <div className="nav-inner">
-          <div className="nav-brand">
-            <div className="auth-brand__logo">
-          <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
-          C-CBMS
-        </div>
-          </div>
-          <div className="nav-links">
-            <a href="#" className="nav-link active">Trang chủ</a>
-            <a href="#" className="nav-link">Phòng &amp; Tiện ích</a>
-            <a href="#" className="nav-link">Dịch vụ</a>
-            <a href="#" className="nav-link">Bảng giá</a>
-            <a href="#" className="nav-link">Hướng dẫn</a>
-          </div>
-          <div className="nav-auth">
-            <button className="btn-outline">Đăng nhập</button>
-            <button className="btn-primary">Đăng ký</button>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* ── HERO ── */}
       <section className="hero">
@@ -195,13 +177,14 @@ export default function LandingPage() {
               <div className="cta-desc">Đăng ký tài khoản để nhận nhiều ưu đãi và tích điểm hấp dẫn!</div>
             </div>
           </div>
-          <button className="btn-cta">
+          <button className="btn-cta" onClick={() => navigate("/register")}>
             <i className="ti ti-user-plus" aria-hidden="true" />
             Đăng ký ngay
           </button>
         </div>
       </section>
 
+      <Footer />
     </div>
   );
 }

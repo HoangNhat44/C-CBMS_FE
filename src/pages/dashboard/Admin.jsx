@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
+import Sidebar from "../../components/Sidebar";
 
 /* ── Sidebar menu ── */
 const menuItems = [
@@ -103,45 +105,70 @@ const activityLogs = [
 const pillMap = { on: "pill-on", hot: "pill-hot", off: "pill-off", blue: "pill-blue", warn: "pill-warn" };
 const rolePill = { Admin: "pill-hot", Owner: "pill-on", Staff: "pill-blue", Customer: "pill-warn", Guest: "pill-off" };
 
+// Decode JWT payload (không cần verify, chỉ lấy thông tin hiển thị)
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
+
+// Lấy chữ viết tắt từ tên đầy đủ (VD: "Minh Quân" → "MQ")
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
+
 export default function AdminDashboard() {
-  const [active, setActive] = useState("dashboard");
+  const [active, setActive]     = useState("dashboard");
+  const [user, setUser]         = useState(null);
+  const [dropOpen, setDropOpen] = useState(false);
+  const dropRef                 = useRef(null);
+  const navigate                = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = decodeToken(token);
+      if (decoded && decoded.exp * 1000 > Date.now()) {
+        setUser(decoded);
+      } else {
+        localStorage.removeItem("token");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setDropOpen(false);
+    navigate("/login", { replace: true });
+  };
+
+  const initials = getInitials(user?.fullName || user?.email || "");
 
   return (
     <div className="dash dash--admin">
 
       {/* ── SIDEBAR ── */}
-      <aside className="sb">
-        <div className="sb-brand">
-          <div className="auth-brand__logo">
-            <img src="/logo.png" alt="Logo" className="auth-brand__logo-icon" />
-            C-CBMS
-          </div>
-        </div>
-
-        {menuItems.map((group) => (
-          <div key={group.section}>
-            <div className="sb-section">{group.section}</div>
-            {group.items.map((item) => (
-              <div
-                key={item.key}
-                className={`sb-item${item.child ? " sb-child" : ""}${active === item.key ? " active" : ""}`}
-                onClick={() => setActive(item.key)}
-              >
-                <i className={`ti ${item.icon}`} aria-hidden="true" />
-                {item.label}
-                {item.badge && <span className="sb-badge">{item.badge}</span>}
-              </div>
-            ))}
-          </div>
-        ))}
-
-        <div className="sb-footer">
-          <div className="sb-logout">
-            <i className="ti ti-logout" aria-hidden="true" />
-            Đăng xuất
-          </div>
-        </div>
-      </aside>
+      <Sidebar menuItems={menuItems} active={active} setActive={setActive} handleLogout={handleLogout} />
 
       {/* ── MAIN ── */}
       <div className="main">
@@ -153,20 +180,66 @@ export default function AdminDashboard() {
             <span className="breadcrumb-active">Quản trị hệ thống</span>
           </div>
           <div className="topbar-right">
-            <div className="tb-icon tb-notif">
-              <i className="ti ti-bell" aria-hidden="true" />
-              <span className="tb-notif-dot" />
-            </div>
-            <div className="tb-icon">
-              <i className="ti ti-settings" aria-hidden="true" />
-            </div>
-            <div className="tb-user">
-              <div className="tb-avatar">AD</div>
-              <div>
-                <div className="tb-uname">System Admin</div>
-                <div className="tb-role">Admin</div>
+            {user ? (
+              <div
+                className="tb-user"
+                ref={dropRef}
+                style={{ position: "relative" }}
+                onClick={() => setDropOpen((v) => !v)}
+              >
+                <div className="tb-avatar">{initials}</div>
+                <div>
+                  <div className="tb-uname">{user.fullName || user.email}</div>
+                  <div className="tb-role" style={{ textTransform: "capitalize" }}>{user.role}</div>
+                </div>
+                <i
+                  className="ti ti-chevron-down"
+                  style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }}
+                />
+
+                {dropOpen && (
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 10px)", right: 0,
+                    background: "#fff", border: "1px solid var(--border)",
+                    borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
+                    minWidth: 180, zIndex: 200, overflow: "hidden",
+                  }}>
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-dark)" }}>
+                        {user.fullName || user.email}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, textTransform: "capitalize" }}>
+                        {user.role}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: "100%", padding: "11px 16px",
+                        background: "none", border: "none",
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontSize: 13, fontWeight: 700, color: "#b42318",
+                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#fff1f0"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                    >
+                      <i className="ti ti-logout" style={{ fontSize: 16 }} />
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <>
+                <button className="btn-outline" onClick={() => navigate("/login")}>
+                  Đăng nhập
+                </button>
+                <button className="btn-primary" onClick={() => navigate("/register")}>
+                  Đăng ký
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -177,7 +250,6 @@ export default function AdminDashboard() {
             <div className="pg-sub">Quản lý người dùng & phân quyền · Tháng 6, 2025</div>
           </div>
 
-          {/* ── Metrics ── */}
           <div className="metrics">
             {metrics.map((m) => (
               <div className="metric" key={m.label}>
@@ -195,10 +267,7 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          {/* ── Row 1: User list + Activity log ── */}
           <div className="row2">
-
-            {/* User table */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
@@ -236,7 +305,6 @@ export default function AdminDashboard() {
               </table>
             </div>
 
-            {/* Activity log */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
@@ -271,13 +339,9 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
-
           </div>
 
-          {/* ── Row 2: Role management + Permission matrix ── */}
           <div className="row2">
-
-            {/* Roles card */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
@@ -328,7 +392,6 @@ export default function AdminDashboard() {
               </table>
             </div>
 
-            {/* Permission matrix */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
@@ -376,13 +439,9 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
-
           </div>
 
-          {/* ── Row 3: User stats by role (bar chart) + Blocked accounts ── */}
           <div className="row2">
-
-            {/* User distribution */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
@@ -405,7 +464,6 @@ export default function AdminDashboard() {
               })}
             </div>
 
-            {/* Blocked users */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
@@ -442,7 +500,6 @@ export default function AdminDashboard() {
                 ))
               )}
             </div>
-
           </div>
         </div>
       </div>

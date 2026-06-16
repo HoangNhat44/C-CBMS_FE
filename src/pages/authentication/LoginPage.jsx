@@ -1,43 +1,53 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Auth.css";
 import authAPI from "../../services/auth.service";
+
+// Map role name → route
+const ROLE_ROUTES = {
+  customer: "/landing-dashboard",
+  owner:    "/owner-dashboard",
+  staff:    "/staff-dashboard",
+  admin:    "/admin-dashboard",
+};
+
 function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSubmitting(true);
+      setError("");
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+      const response = await authAPI.login(form.email, form.password);
+      const { token, user } = response.data.data;
 
-  try {
-    setSubmitting(true);
-    setError("");
+      localStorage.setItem("token", token);
 
-    const response = await authAPI.login(form.email, form.password);
+      // Điều hướng theo role
+      const roleName = user?.role?.name?.toLowerCase();
+      const destination = ROLE_ROUTES[roleName] ?? "/landing-dashboard";
+      navigate(destination, { replace: true });
 
-    console.log(response.data);
-
-    localStorage.setItem(
-      "token",
-      response.data.data.token
-    );
-
-  } catch (err) {
-    setError(
-      err.response?.data?.message ||
-      "Login failed"
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        "Login failed"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="auth-shell">

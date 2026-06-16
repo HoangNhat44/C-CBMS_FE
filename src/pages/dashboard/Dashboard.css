@@ -408,12 +408,10 @@
    NAV — Glass-style sticky header
 ══════════════════════════════════════════════════════════════ */
 .nav {
-    background: rgba(255,255,255,.82);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border-bottom: 1px solid rgba(217,226,236,.6);
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 1px 8px rgba(16,42,67,.06);
+    box-shadow: 0 4px 20px rgba(15,118,110,.08);
     transition: box-shadow .3s, background .3s;
 }
 .nav-inner {
