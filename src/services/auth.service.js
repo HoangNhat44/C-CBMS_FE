@@ -21,6 +21,14 @@ const authAPI = {
       confirmPassword,
     }),
 
+  // Change password
+  changePassword: (currentPassword, newPassword, confirmPassword) =>
+    apiClient.put('/auth/change-password', {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    }),
+
   // Logout
   logout: () => {
     localStorage.removeItem('token');

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../../services/apiClient";
 import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
+import ChangePasswordModal from "../authentication/ChangePasswordModal";
 
 /* ── Sidebar menu ── */
 const menuItems = [
@@ -130,6 +132,7 @@ export default function AdminDashboard() {
   const [active, setActive]     = useState("dashboard");
   const [user, setUser]         = useState(null);
   const [dropOpen, setDropOpen] = useState(false);
+  const [cpModalOpen, setCpModalOpen] = useState(false);
   const dropRef                 = useRef(null);
   const navigate                = useNavigate();
 
@@ -218,6 +221,24 @@ export default function AdminDashboard() {
                         {user.role}
                       </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setDropOpen(false);
+                        setCpModalOpen(true);
+                      }}
+                      style={{
+                        width: "100%", padding: "11px 16px",
+                        background: "none", border: "none",
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
+                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                    >
+                      <i className="ti ti-key" style={{ fontSize: 16 }} />
+                      Đổi mật khẩu
+                    </button>
                     <button
                       onClick={handleLogout}
                       style={{
@@ -509,6 +530,11 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <ChangePasswordModal 
+        isOpen={cpModalOpen} 
+        onClose={() => setCpModalOpen(false)} 
+      />
     </div>
   );
 }
