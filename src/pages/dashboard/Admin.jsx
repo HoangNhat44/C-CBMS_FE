@@ -4,6 +4,8 @@ import api from "../../services/apiClient";
 import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
 import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import UserList from "../account/UserList";
+import userAPI from "../../services/user.service";
 
 /* ── Sidebar menu ── */
 const menuItems = [
@@ -17,8 +19,6 @@ const menuItems = [
     section: "Quản lý người dùng",
     items: [
       { icon: "ti-users",     label: "Tất cả người dùng",  key: "users", badge: "128" },
-      { icon: "ti-user-plus", label: "Thêm người dùng",    key: "adduser" },
-      { icon: "ti-user-x",    label: "Tài khoản bị khóa",  key: "blocked", child: true },
     ],
   },
   {
@@ -42,7 +42,7 @@ const metrics = [
   { icon: "ti-users",       label: "Tổng người dùng", value: "1,284",  trend: "+32",    up: true,  color: "#e11d48" },
   { icon: "ti-user-check",  label: "Đang hoạt động",  value: "1,089",  trend: "+18",    up: true,  color: "#16a34a" },
   { icon: "ti-user-x",      label: "Bị khóa",         value: "23",     trend: "+2",     up: false, color: "#f59e0b" },
-  { icon: "ti-shield-lock", label: "Vai trò",         value: "5",      trend: "ổn định", up: true,  color: "#8b5cf6" },
+ 
 ];
 
 /* ── User list ── */
@@ -133,6 +133,8 @@ export default function AdminDashboard() {
   const [user, setUser]         = useState(null);
   const [dropOpen, setDropOpen] = useState(false);
   const [cpModalOpen, setCpModalOpen] = useState(false);
+  const [totalUsers, setTotalUsers] = useState(0);
+  
   const dropRef                 = useRef(null);
   const navigate                = useNavigate();
 
@@ -146,6 +148,18 @@ export default function AdminDashboard() {
         localStorage.removeItem("token");
       }
     }
+
+    const fetchTotalUsers = async () => {
+      try {
+        const uRes = await userAPI.getAllUsers();
+        if (uRes.data?.success) {
+          setTotalUsers(uRes.data.data.length);
+        }
+      } catch (err) {
+        console.error("Fetch total users failed", err);
+      }
+    };
+    fetchTotalUsers();
   }, []);
 
   useEffect(() => {
@@ -172,7 +186,15 @@ export default function AdminDashboard() {
 
       {/* ── SIDEBAR ── */}
       <Sidebar 
-        menuItems={menuItems} 
+        menuItems={menuItems.map(section => {
+          if (section.section === "Quản lý người dùng") {
+            return {
+              ...section,
+              items: section.items.map(item => item.key === "users" ? { ...item, badge: totalUsers > 0 ? totalUsers.toString() : undefined } : item)
+            };
+          }
+          return section;
+        })}
         active={active} 
         setActive={setActive} 
         handleLogout={handleLogout} 
@@ -272,12 +294,16 @@ export default function AdminDashboard() {
 
         {/* Content */}
         <div className="content">
-          <div>
-            <div className="pg-title">Quản trị hệ thống</div>
-            <div className="pg-sub">Quản lý người dùng & phân quyền · Tháng 6, 2025</div>
-          </div>
+          {active === "users" ? (
+            <UserList />
+          ) : (
+            <>
+              <div>
+                <div className="pg-title">Quản trị hệ thống</div>
+                <div className="pg-sub">Quản lý người dùng & phân quyền · Tháng 6, 2025</div>
+              </div>
 
-          <div className="metrics">
+          <div className="metrics" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
             {metrics.map((m) => (
               <div className="metric" key={m.label}>
                 <div className="metric-accent" style={{ background: m.color }} />
@@ -310,6 +336,7 @@ export default function AdminDashboard() {
                     <th>Email</th>
                     <th>Vai trò</th>
                     <th>Trạng thái</th>
+                    <th style={{ textAlign: "right" }}>Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -326,6 +353,9 @@ export default function AdminDashboard() {
                       <td className="td-muted">{u.email}</td>
                       <td><span className={`pill ${rolePill[u.role]}`}>{u.role}</span></td>
                       <td><span className={`pill ${pillMap[u.status]}`}>{u.statusText}</span></td>
+                      <td style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: 13, color: "var(--text-faint)", fontStyle: "italic" }}>Demo</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -528,8 +558,12 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
+
+
 
       <ChangePasswordModal 
         isOpen={cpModalOpen} 

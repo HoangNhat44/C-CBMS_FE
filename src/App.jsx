@@ -3,7 +3,7 @@ import LoginPage from "./pages/authentication/LoginPage";
 import RegisterPage from "./pages/authentication/RegisterPage";
 import ForgotPasswordPage from "./pages/authentication/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/authentication/ResetPasswordPage";
-import UsersPage from "./pages/account/UsersPage";
+import UserList from "./pages/account/UserList";
 import OwnerDashboard from "./pages/dashboard/Owner";
 import StaffDashboard from "./pages/dashboard/Staff";
 import AdminDashboard from "./pages/dashboard/Admin";
@@ -18,7 +18,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/users" element={<UsersPage />} />
+        <Route path="/users" element={<UserList />} />
         <Route path="/owner-dashboard" element={<OwnerDashboard />} />
         <Route path="/staff-dashboard" element={<StaffDashboard />} />
         <Route path="/landing-dashboard" element={<LandingPage />} />
