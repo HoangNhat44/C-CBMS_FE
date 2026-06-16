@@ -1,6 +1,9 @@
 import apiClient from './apiClient';
 
 const bookingAPI = {
+  // Lấy layout đặt lịch
+  getBookingLayout: (branchId, date) => apiClient.get(`/bookings/layout?branchId=${branchId}&date=${date}`),
+
   // Lấy tất cả bookings
   getAllBookings: () => apiClient.get('/bookings'),
 

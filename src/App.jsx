@@ -1,8 +1,8 @@
 import "./App.css";
-import UsersPage from "./pages/account/UsersPage";
+import BookingPage from "./pages/booking/BookingPage";
 
 function App() {
-  return <UsersPage />;
+  return <BookingPage />;
 }
 
 export default App;
