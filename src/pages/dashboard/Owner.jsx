@@ -4,6 +4,7 @@ import api from "../../services/apiClient";
 import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
 import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import PromotionList from "../promotion/PromotionList";
 
 const menuItems = [
   {
@@ -245,10 +246,14 @@ export default function OwnerDashboard() {
 
         {/* Content */}
         <div className="content">
-          <div>
-            <div className="pg-title">Doanh thu</div>
-            <div className="pg-sub">Tổng quan hoạt động tháng 6 · 2025</div>
-          </div>
+          {active === "promotion" ? (
+            <PromotionList />
+          ) : (
+            <>
+              <div>
+                <div className="pg-title">Doanh thu</div>
+                <div className="pg-sub">Tổng quan hoạt động tháng 6 · 2025</div>
+              </div>
 
           {/* Metrics */}
           <div className="metrics">
@@ -356,6 +361,8 @@ export default function OwnerDashboard() {
               ))}
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
 

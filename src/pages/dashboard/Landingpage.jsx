@@ -61,6 +61,26 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          <div style={{ marginTop: 30 }}>
+            <button 
+              onClick={() => navigate("/apply-promotion")}
+              style={{
+                backgroundColor: "#f59e0b",
+                color: "#fff",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: 8,
+                fontWeight: "bold",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 16
+              }}
+            >
+              <i className="ti ti-ticket" /> Giảm giá test
+            </button>
+          </div>
         </div>
         <div className="hero-right">
           <img
