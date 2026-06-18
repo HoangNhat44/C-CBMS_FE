@@ -1,1 +1,167 @@
+/* App Dashboard Layout C-CBMS */
+* {
+  box-sizing: border-box;
+}
 
+body {
+  margin: 0;
+  background-color: #f8fafc;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Sidebar styling */
+.dashboard-sidebar {
+  width: 260px;
+  background-color: #0b1329; /* Deep midnight blue */
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #111e3b;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.sidebar-brand {
+  height: 75px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  border-bottom: 1px solid #111e3b;
+}
+
+.brand-icon {
+  font-size: 1.6rem;
+  color: #06b6d4; /* Cyan accent */
+  display: flex;
+  align-items: center;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.brand-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #38bdf8 0%, #0d9488 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 16px;
+  flex-grow: 1;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-link:hover {
+  color: #f8fafc;
+  background-color: #16223f;
+  transform: translateX(4px);
+}
+
+.sidebar-link.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.35);
+  transform: translateX(4px);
+}
+
+.link-icon {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #111e3b;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: #080d1d;
+}
+
+.user-info {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #cbd5e1;
+}
+
+.role-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  align-self: flex-start;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+/* Main workspace styling */
+.dashboard-main {
+  flex-grow: 1;
+  background-color: #f8fafc;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    height: auto;
+  }
+
+  .sidebar-brand {
+    height: 60px;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    padding: 12px;
+    gap: 8px;
+    overflow-x: auto;
+  }
+
+  .sidebar-link {
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+}
