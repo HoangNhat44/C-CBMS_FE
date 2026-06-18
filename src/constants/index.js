@@ -3,6 +3,7 @@ export const API_ENDPOINTS = {
   USERS: '/users',
   AUTH: '/auth',
   BOOKINGS: '/bookings',
+  ROLES: '/roles',
 };
 
 export const HTTP_STATUS = {
