@@ -101,6 +101,33 @@
   border-color: var(--primary);
 }
 
+.menu-nav-btn {
+  width: 100%;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--neutral-700);
+  margin-bottom: 4px;
+}
+
+.menu-nav-btn:hover {
+  background-color: var(--neutral-100);
+}
+
+.menu-nav-btn--active {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+}
+
+.menu-nav-btn--active:hover {
+  background-color: var(--primary-hover) !important;
+  color: #ffffff !important;
+}
+
 .booking-sidebar__btn-content {
   display: flex;
   flex-direction: column;
@@ -361,6 +388,19 @@
   text-decoration: line-through;
   font-weight: 500;
   font-size: 0.85rem;
+}
+
+.golden-badge {
+  background-color: #ffedd5;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  margin-top: 4px;
+  display: block;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 /* 3. Footer Bar */

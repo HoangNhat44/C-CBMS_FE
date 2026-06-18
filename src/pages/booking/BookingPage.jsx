@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import branchAPI from "../../services/branch.service";
 import bookingAPI from "../../services/booking.service";
 import productAPI from "../../services/product.service";
 import userAPI from "../../services/user.service";
+import paymentAPI from "../../services/payment.service";
+import PaymentQRModal from "../../components/PaymentQRModal";
 import "./BookingPage.css";
 
 const generateDates = () => {
@@ -46,6 +49,7 @@ const abbreviatePrice = (value) => {
 };
 
 function BookingPage() {
+  const navigate = useNavigate();
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [dates] = useState(generateDates());
@@ -56,7 +60,8 @@ function BookingPage() {
   const [error, setError] = useState("");
   
   // Checkout flow states
-  const [selectedSlot, setSelectedSlot] = useState(null); // { roomId, roomName, slot }
+  const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot objects
+  const [selectedRoom, setSelectedRoom] = useState(null); // { roomId, roomName }
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   
   // Products/F&B selection
@@ -76,6 +81,10 @@ function BookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bookingMessage, setBookingMessage] = useState("");
   const [bookingError, setBookingError] = useState("");
+
+  // QR Modal States
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const [qrData, setQrData] = useState({ qrCode: "", checkoutUrl: "", amount: 0, bookingId: "" });
 
   // Load initial branches and users
   useEffect(() => {
@@ -97,6 +106,23 @@ function BookingPage() {
     loadInitialData();
   }, []);
 
+  // Handle PayOS return URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("paymentStatus");
+    const message = params.get("message");
+    
+    if (paymentStatus) {
+      if (paymentStatus === "success") {
+        alert("Thanh toán thành công! Đơn đặt phòng của bạn đã được xác nhận.");
+      } else {
+        alert(`Thanh toán thất bại hoặc đã hủy: ${decodeURIComponent(message || "")}`);
+      }
+      // Clean up URL parameters to keep address bar clean
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Fetch products and layout data on branch/date change
   useEffect(() => {
     if (!selectedBranchId) return;
@@ -105,7 +131,8 @@ function BookingPage() {
       try {
         setLoading(true);
         setError("");
-        setSelectedSlot(null); // Clear selection
+        setSelectedSlots([]);
+        setSelectedRoom(null);
 
         // 1. Fetch layout
         const layoutRes = await bookingAPI.getBookingLayout(selectedBranchId, selectedDate);
@@ -191,17 +218,26 @@ function BookingPage() {
   const handleSlotClick = (room, slot) => {
     if (slot.isBooked) return;
 
-    if (
-      selectedSlot &&
-      selectedSlot.roomId === room.roomId &&
-      selectedSlot.slot.slotId === slot.slotId
-    ) {
-      setSelectedSlot(null); // Deselect
+    if (selectedRoom && selectedRoom.roomId !== room.roomId) {
+      // Clicked on a different room: reset and select new room/slot
+      setSelectedRoom({ roomId: room.roomId, roomName: room.roomName });
+      setSelectedSlots([slot]);
     } else {
-      setSelectedSlot({
-        roomId: room.roomId,
-        roomName: room.roomName,
-        slot: slot,
+      // Same room or first selection
+      if (!selectedRoom) {
+        setSelectedRoom({ roomId: room.roomId, roomName: room.roomName });
+      }
+      setSelectedSlots((prev) => {
+        const isSelected = prev.some((s) => s.slotId === slot.slotId);
+        if (isSelected) {
+          const filtered = prev.filter((s) => s.slotId !== slot.slotId);
+          if (filtered.length === 0) {
+            setSelectedRoom(null);
+          }
+          return filtered;
+        } else {
+          return [...prev, slot];
+        }
       });
     }
   };
@@ -234,7 +270,7 @@ function BookingPage() {
 
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedSlot) return;
+    if (selectedSlots.length === 0 || !selectedRoom) return;
 
     try {
       setSubmitting(true);
@@ -269,8 +305,8 @@ function BookingPage() {
       const payload = {
         customerId,
         branchId: selectedBranchId,
-        roomId: selectedSlot.roomId,
-        slotId: selectedSlot.slot.slotId,
+        roomId: selectedRoom.roomId,
+        slotIds: selectedSlots.map((s) => s.slotId),
         bookingDate: selectedDate,
         note: guestForm.note || `Đặt phòng cho ${guestForm.fullName || "Khách"}`,
         products: productsPayload,
@@ -280,8 +316,43 @@ function BookingPage() {
       const res = await bookingAPI.createBooking(payload);
 
       if (res.data?.success) {
-        setBookingMessage("Đặt phòng thành công! Hóa đơn đã được lưu.");
-        setSelectedSlot(null);
+        const booking = res.data.data;
+        setBookingMessage("Đặt phòng thành công! Đang khởi tạo mã thanh toán VietQR...");
+        
+        try {
+          const paymentRes = await paymentAPI.createPaymentUrl(booking._id, "full");
+          if (paymentRes.data?.success) {
+            setQrData({
+              qrCode: paymentRes.data.qrCode,
+              checkoutUrl: paymentRes.data.checkoutUrl,
+              amount: paymentRes.data.amount || grandTotal,
+              bookingId: booking._id
+            });
+            
+            // Clear checkout choices and close drawer
+            setSelectedSlots([]);
+            setSelectedRoom(null);
+            setSelectedProducts({});
+            setGuestForm({ fullName: "", email: "", phone: "", note: "" });
+            
+            // Refresh layout in background
+            const layoutRes = await bookingAPI.getBookingLayout(selectedBranchId, selectedDate);
+            setLayoutData(layoutRes.data?.data?.layout || []);
+            
+            setBookingMessage("");
+            setIsCheckoutOpen(false);
+            
+            // Open the QR payment modal
+            setIsQrOpen(true);
+            return;
+          }
+        } catch (paymentErr) {
+          console.error("Payment URL creation failed:", paymentErr);
+          setBookingError("Đặt phòng thành công nhưng không thể tạo liên kết thanh toán. Vui lòng thanh toán trực tiếp.");
+        }
+
+        setSelectedSlots([]);
+        setSelectedRoom(null);
         setSelectedProducts({});
         setGuestForm({ fullName: "", email: "", phone: "", note: "" });
         
@@ -292,7 +363,7 @@ function BookingPage() {
         setTimeout(() => {
           setIsCheckoutOpen(false);
           setBookingMessage("");
-        }, 2500);
+        }, 3000);
       }
     } catch (err) {
       setBookingError(err.response?.data?.message || "Đặt phòng thất bại. Vui lòng kiểm tra lại.");
@@ -301,7 +372,7 @@ function BookingPage() {
     }
   };
 
-  const roomTotal = selectedSlot ? selectedSlot.slot.price : 0;
+  const roomTotal = selectedSlots.reduce((sum, s) => sum + s.price, 0);
   const productTotal = calculateProductTotal();
   const grandTotal = roomTotal + productTotal;
 
@@ -315,7 +386,23 @@ function BookingPage() {
         </div>
         
         <nav className="booking-sidebar__nav">
-          <span className="booking-sidebar__section-title">Chi nhánh</span>
+          <span className="booking-sidebar__section-title">Menu</span>
+          <button
+            className="booking-sidebar__btn menu-nav-btn menu-nav-btn--active"
+            type="button"
+            onClick={() => navigate("/booking")}
+          >
+            🗓️ Đặt phòng
+          </button>
+          <button
+            className="booking-sidebar__btn menu-nav-btn"
+            type="button"
+            onClick={() => navigate("/bookinghistory")}
+          >
+            📜 Lịch sử đặt phòng
+          </button>
+
+          <span className="booking-sidebar__section-title" style={{ marginTop: "16px" }}>Chi nhánh</span>
           {branches.map((b) => (
             <button
               key={b._id}
@@ -403,9 +490,9 @@ function BookingPage() {
                           <div className="slots-grid">
                             {room.slots.map((slot) => {
                               const isSlotSelected =
-                                selectedSlot &&
-                                selectedSlot.roomId === room.roomId &&
-                                selectedSlot.slot.slotId === slot.slotId;
+                                selectedRoom &&
+                                selectedRoom.roomId === room.roomId &&
+                                selectedSlots.some((s) => s.slotId === slot.slotId);
                               
                               return (
                                 <button
@@ -423,6 +510,9 @@ function BookingPage() {
                                 >
                                   <span className="slot-box__time">
                                     {slot.startTime} - {slot.endTime}
+                                    {slot.timeType === "golden" && (
+                                      <span className="golden-badge" title="Giờ vàng (+50k Phụ thu)">🔥 Giờ vàng</span>
+                                    )}
                                   </span>
                                   <strong className="slot-box__price">
                                     {slot.isBooked ? "Đã đặt" : abbreviatePrice(slot.price)}
@@ -442,15 +532,15 @@ function BookingPage() {
         </div>
 
         {/* Bottom Actions Bar */}
-        {selectedSlot && (
+        {selectedSlots.length > 0 && selectedRoom && (
           <footer className="booking-footer-bar">
             <div className="booking-footer-bar__info">
               <span>Đang chọn:</span>
               <strong>
-                {selectedSlot.roomName} ({selectedSlot.slot.startTime} - {selectedSlot.slot.endTime})
+                {selectedRoom.roomName} ({[...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime)).map(s => s.name || `${s.startTime}-${s.endTime}`).join(", ")})
               </strong>
               <span className="booking-footer-bar__price-tag">
-                {formatCurrency(selectedSlot.slot.price)}
+                {formatCurrency(roomTotal)}
               </span>
             </div>
             <button
@@ -465,7 +555,7 @@ function BookingPage() {
       </section>
 
       {/* 3. Checkout Sliding Modal/Drawer */}
-      {isCheckoutOpen && selectedSlot && (
+      {isCheckoutOpen && selectedSlots.length > 0 && selectedRoom && (
         <div className="checkout-overlay" onClick={() => setIsCheckoutOpen(false)}>
           <div className="checkout-drawer" onClick={(e) => e.stopPropagation()}>
             <header className="checkout-drawer__header">
@@ -488,10 +578,10 @@ function BookingPage() {
                   {branches.find((b) => b._id === selectedBranchId)?.name}
                 </p>
                 <p>
-                  <strong>Phòng:</strong> {selectedSlot.roomName}
+                  <strong>Phòng:</strong> {selectedRoom.roomName}
                 </p>
                 <p>
-                  <strong>Khung giờ:</strong> {selectedSlot.slot.startTime} - {selectedSlot.slot.endTime}
+                  <strong>Khung giờ:</strong> {[...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime)).map(s => s.name || `${s.startTime}-${s.endTime}`).join("; ")}
                 </p>
                 <p>
                   <strong>Ngày đặt:</strong> {selectedDate}
@@ -645,6 +735,20 @@ function BookingPage() {
           </div>
         </div>
       )}
+
+      {/* Payment QR Modal */}
+      <PaymentQRModal
+        isOpen={isQrOpen}
+        onClose={() => setIsQrOpen(false)}
+        qrCode={qrData.qrCode}
+        checkoutUrl={qrData.checkoutUrl}
+        amount={qrData.amount}
+        bookingId={qrData.bookingId}
+        onPaymentSuccess={() => {
+          setIsQrOpen(false);
+          navigate("/bookinghistory");
+        }}
+      />
     </main>
   );
 }

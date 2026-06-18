@@ -1,0 +1,250 @@
+/* BookingHistoryPage.css */
+
+.history-page {
+  background-color: #fafafa;
+}
+
+.history-content {
+  flex-grow: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.history-header {
+  margin-bottom: 20px;
+}
+
+.history-header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+}
+
+/* Container for table and controls */
+.history-table-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e0e0e0;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Control bar: search on left, tabs on right */
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* Search Box styling matching the image */
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 2px solid #b3b3b3;
+  border-radius: 10px;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  width: 250px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.search-box .search-icon {
+  margin-right: 8px;
+  color: #777777;
+  font-size: 0.9rem;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #333333;
+  font-family: inherit;
+}
+
+.search-box input::placeholder {
+  color: #a3a3a3;
+}
+
+/* Filter Tab Buttons matching the image */
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-tab-btn {
+  background-color: #ffffff;
+  border: 2px solid #555555;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 550;
+  color: #333333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.filter-tab-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.filter-tab-btn--active {
+  background-color: #e3e3e3;
+  border-color: #333333;
+  font-weight: 700;
+}
+
+/* Table layout styling */
+.table-wrapper {
+  overflow-x: auto;
+  flex-grow: 1;
+}
+
+.bookings-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: inherit;
+  border: 1.5px solid #dcdcdc;
+  margin-top: 10px;
+}
+
+.bookings-grid-table th, 
+.bookings-grid-table td {
+  padding: 14px 12px;
+  text-align: center;
+  border: 1px solid #dcdcdc;
+  font-size: 0.92rem;
+}
+
+/* Table Header matching the image */
+.bookings-grid-table th {
+  background-color: #eaeaea;
+  font-weight: 700;
+  color: #222222;
+  border-bottom: 2.5px solid #cccccc;
+  font-size: 0.9rem;
+}
+
+.bookings-grid-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.bookings-grid-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.bookings-grid-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+.font-semibold {
+  font-weight: 600;
+  color: #111111;
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+/* Action Button matching the image */
+.detail-action-link-btn {
+  background-color: #ffffff;
+  border: 2px solid #555555;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #333333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.detail-action-link-btn:hover {
+  background-color: #e5e5e5;
+  border-color: #333333;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Status texts matching image labels */
+.status-badge-text {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.status-badge-text--pending {
+  color: #ea580c; /* PENDING */
+}
+
+.status-badge-text--confirmed {
+  color: #2563eb; /* CONFIRMED */
+}
+
+.status-badge-text--refunded {
+  color: #6b7280; /* REFUNDED - Đã hoàn tiền */
+}
+
+.status-badge-text--completed {
+  color: #16a34a; /* COMPLETED */
+}
+
+.status-badge-text--cancelled {
+  color: #dc2626; /* CANCELLED */
+}
+
+/* Loading/Empty State helpers inside table wrapper */
+.booking-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  text-align: center;
+  color: #666666;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0,0,0,0.1);
+  border-top-color: var(--primary, #4f46e5);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-box-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.booking-state h3 {
+  margin: 0 0 6px 0;
+  color: #333333;
+}
+
+.booking-state p {
+  font-size: 0.88rem;
+  margin: 0;
+}

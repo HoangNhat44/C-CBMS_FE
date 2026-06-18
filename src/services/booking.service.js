@@ -4,8 +4,8 @@ const bookingAPI = {
   // Lấy layout đặt lịch
   getBookingLayout: (branchId, date) => apiClient.get(`/bookings/layout?branchId=${branchId}&date=${date}`),
 
-  // Lấy tất cả bookings
-  getAllBookings: () => apiClient.get('/bookings'),
+  // Lấy tất cả bookings (có thể lọc qua params như customerId, status...)
+  getAllBookings: (params) => apiClient.get('/bookings', { params }),
 
   // Lấy booking theo ID
   getBookingById: (id) => apiClient.get(`/bookings/${id}`),
@@ -13,8 +13,8 @@ const bookingAPI = {
   // Tạo booking mới
   createBooking: (data) => apiClient.post('/bookings', data),
 
-  // Cập nhật booking
-  updateBooking: (id, data) => apiClient.put(`/bookings/${id}`, data),
+  // Cập nhật trạng thái booking (status, paymentStatus)
+  updateBookingStatus: (id, data) => apiClient.put(`/bookings/${id}/status`, data),
 
   // Xóa booking
   deleteBooking: (id) => apiClient.delete(`/bookings/${id}`),
