@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import ChangePasswordModal from "../pages/authentication/ChangePasswordModal";
 
 function decodeToken(token) {
@@ -27,6 +27,8 @@ export default function Header() {
   const [cpModalOpen, setCpModalOpen] = useState(false);
   const dropRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -70,11 +72,11 @@ export default function Header() {
         </div>
 
         <div className="nav-links">
-          <a href="#" className="nav-link active">Trang chủ</a>
-          <a href="#" className="nav-link">Phòng &amp; Tiện ích</a>
-          <a href="#" className="nav-link">Dịch vụ</a>
-          <a href="#" className="nav-link">Bảng giá</a>
-          <a href="#" className="nav-link">Hướng dẫn</a>
+          <Link to="/landing-dashboard" className={`nav-link ${currentPath === "/landing-dashboard" ? "active" : ""}`}>Trang chủ</Link>
+          <Link to="/booking" className={`nav-link ${currentPath === "/booking" ? "active" : ""}`}>Đặt Phòng</Link>
+          <Link to="/bookinghistory" className={`nav-link ${currentPath === "/bookinghistory" ? "active" : ""}`}>Lịch sử đặt phòng</Link>
+          <a href="#" className="nav-link">Bảng tin</a>
+          <a href="#" className="nav-link">Đánh giá</a>
         </div>
 
         <div className="nav-auth">
@@ -110,7 +112,7 @@ export default function Header() {
                       {user.role}
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       setDropOpen(false);
@@ -160,10 +162,10 @@ export default function Header() {
           )}
         </div>
       </div>
-      
-      <ChangePasswordModal 
-        isOpen={cpModalOpen} 
-        onClose={() => setCpModalOpen(false)} 
+
+      <ChangePasswordModal
+        isOpen={cpModalOpen}
+        onClose={() => setCpModalOpen(false)}
       />
     </nav>
   );

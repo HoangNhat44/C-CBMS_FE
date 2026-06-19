@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import bookingAPI from "../../services/booking.service";
+import authAPI from "../../services/auth.service";
+import Header from "../../components/Header";
 import "./BookingHistoryPage.css";
+
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
 
 function BookingHistoryPage() {
   const navigate = useNavigate();
@@ -11,13 +22,63 @@ function BookingHistoryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Fetch all bookings (for all customers)
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Fetch bookings for the logged-in customer (or all if staff/admin/owner)
   useEffect(() => {
-    const fetchAllBookings = async () => {
+    const checkUserAndFetchBookings = async () => {
       try {
         setLoading(true);
         setError("");
-        const res = await bookingAPI.getAllBookings(); // call without customerId to get all bookings
+        
+        let userObj = null;
+        const token = localStorage.getItem("token");
+        if (token) {
+          // Decode immediately
+          const decoded = decodeToken(token);
+          if (decoded && decoded.exp * 1000 > Date.now()) {
+            userObj = {
+              id: decoded.userId,
+              email: decoded.email,
+              role: decoded.role,
+            };
+            setCurrentUser(userObj);
+          }
+
+          // Verify with backend
+          try {
+            const verifyRes = await authAPI.verifyToken();
+            if (verifyRes.data?.success) {
+              userObj = verifyRes.data.data.user;
+              setCurrentUser(userObj);
+            } else {
+              localStorage.removeItem("token");
+              userObj = null;
+              setCurrentUser(null);
+            }
+          } catch (verifyErr) {
+            console.error("Token verification failed:", verifyErr);
+            localStorage.removeItem("token");
+            userObj = null;
+            setCurrentUser(null);
+          }
+        }
+
+        const params = {};
+        if (userObj) {
+          const roleName = (userObj.role?.name || userObj.role || "").toLowerCase();
+          // If customer, only show their own bookings
+          if (roleName === "customer") {
+            params.customerId = userObj.id || userObj._id;
+          }
+        } else {
+          // If not logged in, show no bookings
+          setBookings([]);
+          setLoading(false);
+          return;
+        }
+
+        const res = await bookingAPI.getAllBookings(params);
         if (res.data?.success) {
           setBookings(res.data.data || []);
         } else {
@@ -30,7 +91,8 @@ function BookingHistoryPage() {
         setLoading(false);
       }
     };
-    fetchAllBookings();
+
+    checkUserAndFetchBookings();
   }, []);
 
   const formatCurrency = (val) => {
@@ -87,37 +149,13 @@ function BookingHistoryPage() {
   });
 
   return (
-    <main className="booking-page history-page">
-      {/* 1. Sidebar - Menu */}
-      <aside className="booking-sidebar">
-        <div className="booking-sidebar__logo">
-          <h2>Café & Cinema</h2>
-          <p>Hệ thống đặt phòng phim tư nhân</p>
-        </div>
-
-        <nav className="booking-sidebar__nav">
-          <span className="booking-sidebar__section-title">Menu</span>
-          <button
-            className="booking-sidebar__btn menu-nav-btn"
-            type="button"
-            onClick={() => navigate("/booking")}
-          >
-            🗓️ Đặt phòng
-          </button>
-          <button
-            className="booking-sidebar__btn menu-nav-btn menu-nav-btn--active"
-            type="button"
-            onClick={() => navigate("/bookinghistory")}
-          >
-            📜 Lịch sử đặt phòng
-          </button>
-        </nav>
-      </aside>
-
-      {/* 2. Main History Workspace */}
-      <section className="booking-content history-content">
+    <>
+      <Header />
+      <main className="booking-page history-page">
+        {/* 2. Main History Workspace */}
+        <section className="booking-content history-content">
         <header className="history-header">
-          <h1>Lịch sử đặt phòng</h1>
+          <h1>Lịch sử đặt phòng{currentUser && ` - ${currentUser.fullName || currentUser.email}`}</h1>
         </header>
 
         <div className="history-table-container">
@@ -238,6 +276,7 @@ function BookingHistoryPage() {
         </div>
       </section>
     </main>
+    </>
   );
 }
 

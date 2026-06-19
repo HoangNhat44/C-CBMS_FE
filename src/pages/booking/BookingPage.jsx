@@ -4,10 +4,20 @@ import { io } from "socket.io-client";
 import branchAPI from "../../services/branch.service";
 import bookingAPI from "../../services/booking.service";
 import productAPI from "../../services/product.service";
-import userAPI from "../../services/user.service";
 import paymentAPI from "../../services/payment.service";
+import authAPI from "../../services/auth.service";
 import PaymentQRModal from "../../components/PaymentQRModal";
+import Header from "../../components/Header";
 import "./BookingPage.css";
+
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
 
 const generateDates = () => {
   const dates = [];
@@ -68,9 +78,8 @@ function BookingPage() {
   const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState({}); // { [productId]: quantity }
   
-  // Guest/Customer Selection
-  const [users, setUsers] = useState([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  // Guest/Customer Selection & Auth State
+  const [currentUser, setCurrentUser] = useState(null);
   const [guestForm, setGuestForm] = useState({
     fullName: "",
     email: "",
@@ -86,7 +95,7 @@ function BookingPage() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [qrData, setQrData] = useState({ qrCode: "", checkoutUrl: "", amount: 0, bookingId: "" });
 
-  // Load initial branches and users
+  // Load initial branch data and verify token
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -97,10 +106,35 @@ function BookingPage() {
           setSelectedBranchId(branchList[0]._id);
         }
 
-        const userRes = await userAPI.getAllUsers();
-        setUsers(userRes.data?.data || []);
+        const token = localStorage.getItem("token");
+        if (token) {
+          // Decode immediately for fast UI feedback
+          const decoded = decodeToken(token);
+          if (decoded && decoded.exp * 1000 > Date.now()) {
+            setCurrentUser({
+              id: decoded.userId,
+              email: decoded.email,
+              role: decoded.role,
+            });
+          }
+
+          // Verify with backend
+          try {
+            const verifyRes = await authAPI.verifyToken();
+            if (verifyRes.data?.success) {
+              setCurrentUser(verifyRes.data.data.user);
+            } else {
+              localStorage.removeItem("token");
+              setCurrentUser(null);
+            }
+          } catch (verifyErr) {
+            console.error("Token verification failed:", verifyErr);
+            localStorage.removeItem("token");
+            setCurrentUser(null);
+          }
+        }
       } catch (err) {
-        setError("Không thể tải thông tin chi nhánh hoặc khách hàng.");
+        setError("Không thể tải thông tin chi nhánh.");
       }
     };
     loadInitialData();
@@ -277,41 +311,35 @@ function BookingPage() {
       setBookingError("");
       setBookingMessage("");
 
-      // Prepare request payload
-      let customerId = selectedCustomerId;
-      
-      // If customer is not selected from DB list (guest checkout),
-      // we can use a fallback default customer or create/register guest user first.
-      // For this prototype, we'll require choosing or registering a user,
-      // or if guest details are filled, we'll try to find or use the customer account.
-      if (!customerId) {
-        // Find existing customer by email, or create a guest user
-        // For simplicity, let's use the first registered user or show error
-        if (users.length > 0) {
-          // Default to the first user if none is selected
-          customerId = users[0]._id;
-        } else {
-          setBookingError("Vui lòng đăng ký tài khoản khách hàng trước.");
-          setSubmitting(false);
-          return;
-        }
-      }
-
       const productsPayload = Object.keys(selectedProducts).map((pId) => ({
         productId: pId,
         quantity: selectedProducts[pId],
       }));
 
       const payload = {
-        customerId,
         branchId: selectedBranchId,
         roomId: selectedRoom.roomId,
         slotIds: selectedSlots.map((s) => s.slotId),
         bookingDate: selectedDate,
-        note: guestForm.note || `Đặt phòng cho ${guestForm.fullName || "Khách"}`,
+        note: guestForm.note || `Đặt phòng cho ${currentUser ? currentUser.fullName : (guestForm.fullName || "Khách")}`,
         products: productsPayload,
         discountAmount: 0,
       };
+
+      if (currentUser) {
+        payload.customerId = currentUser.id || currentUser._id;
+      } else {
+        if (!guestForm.fullName || !guestForm.email || !guestForm.phone) {
+          setBookingError("Vui lòng nhập đầy đủ thông tin cá nhân để đặt phòng.");
+          setSubmitting(false);
+          return;
+        }
+        payload.guestInfo = {
+          fullName: guestForm.fullName,
+          email: guestForm.email,
+          phone: guestForm.phone,
+        };
+      }
 
       const res = await bookingAPI.createBooking(payload);
 
@@ -377,49 +405,30 @@ function BookingPage() {
   const grandTotal = roomTotal + productTotal;
 
   return (
-    <main className="booking-page">
-      {/* 1. Sidebar - Branches */}
-      <aside className="booking-sidebar">
-        <div className="booking-sidebar__logo">
-          <h2>Café & Cinema</h2>
-          <p>Hệ thống đặt phòng phim tư nhân</p>
-        </div>
-        
-        <nav className="booking-sidebar__nav">
-          <span className="booking-sidebar__section-title">Menu</span>
-          <button
-            className="booking-sidebar__btn menu-nav-btn menu-nav-btn--active"
-            type="button"
-            onClick={() => navigate("/booking")}
-          >
-            🗓️ Đặt phòng
-          </button>
-          <button
-            className="booking-sidebar__btn menu-nav-btn"
-            type="button"
-            onClick={() => navigate("/bookinghistory")}
-          >
-            📜 Lịch sử đặt phòng
-          </button>
-
-          <span className="booking-sidebar__section-title" style={{ marginTop: "16px" }}>Chi nhánh</span>
-          {branches.map((b) => (
-            <button
-              key={b._id}
-              className={`booking-sidebar__btn ${
-                selectedBranchId === b._id ? "booking-sidebar__btn--active" : ""
-              }`}
-              type="button"
-              onClick={() => setSelectedBranchId(b._id)}
-            >
-              <div className="booking-sidebar__btn-content">
-                <strong>{b.name}</strong>
-                <span>{b.address}</span>
-              </div>
-            </button>
-          ))}
-        </nav>
-      </aside>
+    <>
+      <Header />
+      <main className="booking-page">
+        {/* 1. Sidebar - Branches */}
+        <aside className="booking-sidebar">
+          <nav className="booking-sidebar__nav">
+            <span className="booking-sidebar__section-title">Chi nhánh</span>
+            {branches.map((b) => (
+              <button
+                key={b._id}
+                className={`booking-sidebar__btn ${
+                  selectedBranchId === b._id ? "booking-sidebar__btn--active" : ""
+                }`}
+                type="button"
+                onClick={() => setSelectedBranchId(b._id)}
+              >
+                <div className="booking-sidebar__btn-content">
+                  <strong>{b.name}</strong>
+                  <span>{b.address}</span>
+                </div>
+              </button>
+            ))}
+          </nav>
+        </aside>
 
       {/* 2. Main Work Area */}
       <section className="booking-content">
@@ -592,25 +601,32 @@ function BookingPage() {
                 </p>
               </div>
 
-              {/* Guest Details */}
+              {/* Guest / Logged-in Customer Details */}
               <div className="checkout-form-section">
                 <h4>Khách hàng thanh toán</h4>
-                <div className="input-group">
-                  <label>Chọn tài khoản thành viên (nếu có)</label>
-                  <select
-                    value={selectedCustomerId}
-                    onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  >
-                    <option value="">-- Khách vãng lai (Nhập thông tin bên dưới) --</option>
-                    {users.map((u) => (
-                      <option key={u._id} value={u._id}>
-                        {u.fullName} ({u.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
 
-                {!selectedCustomerId && (
+                {currentUser ? (
+                  <div className="logged-in-user-card" style={{
+                    background: "var(--bg-hover, #f8f9fa)",
+                    border: "1px solid var(--border, #e9ecef)",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                    marginBottom: "16px"
+                  }}>
+                    <p style={{ margin: "0 0 6px 0", fontSize: "14px", color: "#495057" }}>
+                      Đặt phòng dưới tài khoản thành viên:
+                    </p>
+                    <div style={{ fontWeight: "700", color: "var(--text-dark, #212529)", fontSize: "16px" }}>
+                      {currentUser.fullName || "Khách thành viên"}
+                    </div>
+                    <div style={{ fontSize: "13px", color: "var(--text-muted, #6c757d)", marginTop: "2px" }}>
+                      Email: {currentUser.email} | SĐT: {currentUser.phone || "Chưa cập nhật"}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--primary, #007bff)", fontWeight: "600", textTransform: "uppercase", marginTop: "6px" }}>
+                      Vai trò: {currentUser.role?.name || currentUser.role || "customer"}
+                    </div>
+                  </div>
+                ) : (
                   <>
                     <div className="input-group">
                       <label>Họ và tên khách</label>
@@ -750,6 +766,7 @@ function BookingPage() {
         }}
       />
     </main>
+    </>
   );
 }
 
