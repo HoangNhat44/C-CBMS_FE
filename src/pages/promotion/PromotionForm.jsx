@@ -11,6 +11,7 @@ export default function PromotionForm({ promotion, onSubmit, onCancel }) {
     endDate: "",
     branchIds: [],
     isActive: true,
+    maxUsage: "",
   });
   const [branches, setBranches] = useState([]);
 
@@ -44,6 +45,7 @@ export default function PromotionForm({ promotion, onSubmit, onCancel }) {
         endDate: promotion.endDate ? new Date(promotion.endDate).toISOString().slice(0, 10) : "",
         branchIds: promotion.branchIds?.map(b => b._id || b) || [],
         isActive: promotion.isActive !== undefined ? promotion.isActive : true,
+        maxUsage: promotion.maxUsage || "",
       });
     }
   }, [promotion]);
@@ -78,7 +80,11 @@ export default function PromotionForm({ promotion, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submitData = {
+      ...formData,
+      maxUsage: formData.maxUsage !== "" ? Number(formData.maxUsage) : null
+    };
+    onSubmit(submitData);
   };
 
   return (
@@ -139,6 +145,19 @@ export default function PromotionForm({ promotion, onSubmit, onCancel }) {
             style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8 }}
             min="0"
             required
+          />
+        </div>
+
+        <div className="form-group" style={{ marginBottom: 15 }}>
+          <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 13 }}>Giới hạn lượt sử dụng</label>
+          <input
+            type="number"
+            name="maxUsage"
+            value={formData.maxUsage}
+            onChange={handleChange}
+            placeholder="Bỏ trống nếu không giới hạn"
+            style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8 }}
+            min="1"
           />
         </div>
 

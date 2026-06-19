@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import promotionAPI from "../../services/promotion.service";
 
 export default function ApplyPromotion() {
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inputCode, setInputCode] = useState("");
-  const [selectedPromo, setSelectedPromo] = useState(null);
+  const [selectedAvailablePromo, setSelectedAvailablePromo] = useState(null);
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const currentBranchId = searchParams.get("branchId") || "";
 
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
         setLoading(true);
-        const res = await promotionAPI.getAllPromotions();
+        const res = await promotionAPI.getAllPromotions(currentBranchId);
         if (res.data?.success || res.success) {
           const allPromos = res.data?.data || res.data || [];
           const now = new Date();
-          
+
           // Lọc: active = true, nằm trong khoảng ngày, và KHÔNG CÓ code
           const validPromos = allPromos.filter(p => {
             const isActive = p.isActive;
@@ -40,29 +43,45 @@ export default function ApplyPromotion() {
     fetchPromotions();
   }, []);
 
-  const handleApplyCode = () => {
+  const handleApplyCode = async () => {
     if (!inputCode.trim()) return;
-    // Tạm thời chỉ set mock hoặc có thể check từ API sau này. 
-    // Yêu cầu chỉ bảo làm giao diện chưa cần chức năng xử lý sâu.
-    alert(`Đã nhấn áp dụng mã: ${inputCode}`);
+
+    try {
+      const res = await promotionAPI.applyPromotion(inputCode.trim(), currentBranchId);
+      if (res.success || res.data?.success) {
+        const newPromo = res.data?.data || res.data;
+        if (appliedVoucher?._id === newPromo._id) {
+          alert("Mã này đã được áp dụng!");
+          return;
+        }
+        setAppliedVoucher(newPromo);
+        setInputCode(""); // Reset ô nhập
+        alert(res.message || res.data?.message || `Đã áp dụng mã: ${inputCode.toUpperCase()}`);
+      } else {
+        alert(res.message || res.data?.message || "Không thể áp dụng mã này.");
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Mã giảm giá không hợp lệ hoặc không áp dụng cho chi nhánh này.");
+    }
   };
 
   const handleConfirm = () => {
-    if (!selectedPromo && !inputCode) {
+    if (!selectedAvailablePromo && !appliedVoucher) {
       alert("Vui lòng chọn hoặc nhập mã giảm giá trước khi xác nhận!");
       return;
     }
-    alert(`Đã xác nhận áp dụng mã thành công!`);
+    const count = (selectedAvailablePromo ? 1 : 0) + (appliedVoucher ? 1 : 0);
+    alert(`Đã xác nhận áp dụng ${count} mã thành công!`);
     navigate(-1);
   };
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", padding: "40px 20px" }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        <button 
+        <button
           onClick={() => navigate(-1)}
-          style={{ 
-            background: "none", border: "none", color: "#64748b", cursor: "pointer", 
+          style={{
+            background: "none", border: "none", color: "#64748b", cursor: "pointer",
             display: "flex", alignItems: "center", gap: 5, marginBottom: 20, fontSize: 14, fontWeight: 600
           }}
         >
@@ -75,16 +94,16 @@ export default function ApplyPromotion() {
 
           {/* Ô nhập mã giảm giá */}
           <div style={{ display: "flex", gap: 10, marginBottom: 30 }}>
-            <input 
-              type="text" 
-              placeholder="Nhập mã code..." 
+            <input
+              type="text"
+              placeholder="Nhập mã code..."
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
               style={{
                 flex: 1, padding: "12px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 15, textTransform: "uppercase"
               }}
             />
-            <button 
+            <button
               onClick={handleApplyCode}
               style={{
                 backgroundColor: inputCode.trim() ? "#3b82f6" : "#cbd5e1",
@@ -106,17 +125,17 @@ export default function ApplyPromotion() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {promotions.map((promo) => {
-                const isSelected = selectedPromo?._id === promo._id;
+                const isSelected = selectedAvailablePromo?._id === promo._id;
                 return (
-                  <div 
-                    key={promo._id} 
-                    onClick={() => setSelectedPromo(isSelected ? null : promo)}
-                    style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
+                  <div
+                    key={promo._id}
+                    onClick={() => setSelectedAvailablePromo(isSelected ? null : promo)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
                       justifyContent: "space-between",
-                      padding: 16, 
-                      border: `2px solid ${isSelected ? "#3b82f6" : "#e2e8f0"}`, 
+                      padding: 16,
+                      border: `2px solid ${isSelected ? "#3b82f6" : "#e2e8f0"}`,
                       borderRadius: 12,
                       cursor: "pointer",
                       backgroundColor: isSelected ? "#eff6ff" : "#fff",
@@ -133,7 +152,7 @@ export default function ApplyPromotion() {
                       </div>
                     </div>
                     <div>
-                      <div style={{ 
+                      <div style={{
                         width: 24, height: 24, borderRadius: "50%", border: `2px solid ${isSelected ? "#3b82f6" : "#cbd5e1"}`,
                         display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: isSelected ? "#3b82f6" : "transparent"
                       }}>
@@ -153,15 +172,21 @@ export default function ApplyPromotion() {
             <div>
               <div style={{ fontSize: 14, color: "#64748b" }}>Đã chọn</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>
-                {selectedPromo ? selectedPromo.title : inputCode ? `Mã: ${inputCode.toUpperCase()}` : "Chưa chọn"}
+                {selectedAvailablePromo && appliedVoucher 
+                  ? `Mã: ${appliedVoucher.code.toUpperCase()} & ${selectedAvailablePromo.title}`
+                  : appliedVoucher 
+                    ? `Mã: ${appliedVoucher.code.toUpperCase()}` 
+                    : selectedAvailablePromo 
+                      ? selectedAvailablePromo.title 
+                      : "Chưa chọn"}
               </div>
             </div>
-            <button 
+            <button
               onClick={handleConfirm}
               style={{
-                backgroundColor: (selectedPromo || inputCode.trim()) ? "#10b981" : "#cbd5e1",
+                backgroundColor: (selectedAvailablePromo || appliedVoucher) ? "#10b981" : "#cbd5e1",
                 color: "#fff", border: "none", padding: "14px 32px", borderRadius: 8, fontWeight: "bold", fontSize: 16,
-                cursor: (selectedPromo || inputCode.trim()) ? "pointer" : "not-allowed", transition: "0.2s"
+                cursor: (selectedAvailablePromo || appliedVoucher) ? "pointer" : "not-allowed", transition: "0.2s"
               }}
             >
               Xác nhận
