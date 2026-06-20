@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const configuredBaseUrl = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '');
+const API_BASE_URL = configuredBaseUrl
+  ? `${configuredBaseUrl}${configuredBaseUrl.endsWith('/api') ? '' : '/api'}`
+  : '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
