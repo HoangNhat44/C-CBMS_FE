@@ -83,7 +83,7 @@ function PaymentQRModal({
 
   if (!isOpen) return null;
 
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCode)}`;
+  const qrImageUrl = qrCode || "";
 
   return (
     <div className="payment-qr-overlay">
