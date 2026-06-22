@@ -6,6 +6,7 @@ import bookingAPI from "../../services/booking.service";
 import productAPI from "../../services/product.service";
 import paymentAPI from "../../services/payment.service";
 import authAPI from "../../services/auth.service";
+import promotionAPI from "../../services/promotion.service";
 import PaymentQRModal from "../../components/PaymentQRModal";
 import Header from "../../components/Header";
 import "./BookingPage.css";
@@ -95,6 +96,15 @@ function BookingPage() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [qrData, setQrData] = useState({ qrCode: "", checkoutUrl: "", amount: 0, bookingId: "" });
 
+  // Promotion States
+  const [promotions, setPromotions] = useState([]);
+  const [selectedPromotions, setSelectedPromotions] = useState([]);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState("");
+
   // Load initial branch data and verify token
   useEffect(() => {
     const loadInitialData = async () => {
@@ -176,6 +186,14 @@ function BookingPage() {
         const productsRes = await productAPI.getAllProducts(selectedBranchId);
         setProducts(productsRes.data?.data || []);
         setSelectedProducts({}); // Reset selected products
+
+        // 3. Fetch promotions
+        const promosRes = await promotionAPI.getAllPromotions(selectedBranchId);
+        setPromotions(promosRes.data || promosRes.data?.data || []);
+        setSelectedPromotions([]); // Reset selected promotions
+        setPromoCodeInput("");
+        setPromoError("");
+        setPromoSuccess("");
       } catch (err) {
         setError("Không thể tải dữ liệu sơ đồ phòng và bảng giá.");
       } finally {
@@ -302,6 +320,88 @@ function BookingPage() {
     return total;
   };
 
+  const roomTotal = selectedSlots.reduce((sum, s) => sum + s.price, 0);
+  const productTotal = calculateProductTotal();
+
+  // Recalculate discount whenever roomTotal, productTotal, or selectedPromotions change
+  useEffect(() => {
+    const originalPrice = roomTotal + productTotal;
+    if (selectedPromotions.length === 0) {
+      setDiscountAmount(0);
+      setGrandTotal(originalPrice);
+      return;
+    }
+
+    const calculateDiscount = async () => {
+      try {
+        const res = await promotionAPI.calculateDiscount(originalPrice, selectedPromotions);
+        if (res.success && res.data) {
+          setDiscountAmount(res.data.discountAmount);
+          setGrandTotal(res.data.finalTotal);
+        } else {
+          setDiscountAmount(0);
+          setGrandTotal(originalPrice);
+        }
+      } catch (err) {
+        console.error("Failed to calculate discount:", err);
+        setDiscountAmount(0);
+        setGrandTotal(originalPrice);
+      }
+    };
+
+    calculateDiscount();
+  }, [roomTotal, productTotal, selectedPromotions]);
+
+  const handleTogglePromotion = (promoId) => {
+    setSelectedPromotions((prev) => {
+      if (prev.includes(promoId)) {
+        return prev.filter((id) => id !== promoId);
+      } else {
+        return [...prev, promoId];
+      }
+    });
+  };
+
+  const handleApplyPromoCode = async () => {
+    setPromoError("");
+    setPromoSuccess("");
+    if (!promoCodeInput.trim()) {
+      setPromoError("Vui lòng nhập mã giảm giá.");
+      return;
+    }
+
+    try {
+      const res = await promotionAPI.applyPromotion(promoCodeInput.trim(), selectedBranchId);
+      if (res.success && res.data) {
+        const promo = res.data;
+        
+        // Check if already selected
+        if (selectedPromotions.includes(promo._id)) {
+          setPromoSuccess("Mã giảm giá này đã được áp dụng rồi.");
+          return;
+        }
+
+        // Add to promotions list if not already there, so it renders on screen
+        setPromotions((prev) => {
+          const exists = prev.some((p) => p._id === promo._id);
+          if (!exists) {
+            return [promo, ...prev];
+          }
+          return prev;
+        });
+
+        // Select it
+        setSelectedPromotions((prev) => [...prev, promo._id]);
+        setPromoSuccess(`Áp dụng mã ${promo.code} thành công!`);
+        setPromoCodeInput("");
+      } else {
+        setPromoError(res.message || "Mã giảm giá không hợp lệ hoặc đã hết hạn.");
+      }
+    } catch (err) {
+      setPromoError(err.response?.data?.message || "Không thể áp dụng mã giảm giá. Vui lòng kiểm tra lại.");
+    }
+  };
+
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
     if (selectedSlots.length === 0 || !selectedRoom) return;
@@ -323,7 +423,7 @@ function BookingPage() {
         bookingDate: selectedDate,
         note: guestForm.note || `Đặt phòng cho ${currentUser ? currentUser.fullName : (guestForm.fullName || "Khách")}`,
         products: productsPayload,
-        discountAmount: 0,
+        appliedPromotions: selectedPromotions,
       };
 
       if (currentUser) {
@@ -362,6 +462,10 @@ function BookingPage() {
             setSelectedRoom(null);
             setSelectedProducts({});
             setGuestForm({ fullName: "", email: "", phone: "", note: "" });
+            setSelectedPromotions([]);
+            setPromoCodeInput("");
+            setPromoError("");
+            setPromoSuccess("");
             
             // Refresh layout in background
             const layoutRes = await bookingAPI.getBookingLayout(selectedBranchId, selectedDate);
@@ -383,6 +487,10 @@ function BookingPage() {
         setSelectedRoom(null);
         setSelectedProducts({});
         setGuestForm({ fullName: "", email: "", phone: "", note: "" });
+        setSelectedPromotions([]);
+        setPromoCodeInput("");
+        setPromoError("");
+        setPromoSuccess("");
         
         // Refresh layout
         const layoutRes = await bookingAPI.getBookingLayout(selectedBranchId, selectedDate);
@@ -399,10 +507,6 @@ function BookingPage() {
       setSubmitting(false);
     }
   };
-
-  const roomTotal = selectedSlots.reduce((sum, s) => sum + s.price, 0);
-  const productTotal = calculateProductTotal();
-  const grandTotal = roomTotal + productTotal;
 
   return (
     <>
@@ -721,6 +825,74 @@ function BookingPage() {
                 )}
               </div>
 
+              {/* Promotion / Voucher Section */}
+              <div className="checkout-form-section promo-form-section">
+                <h4>Khuyến mãi & Mã giảm giá</h4>
+                
+                {/* Manual input */}
+                <div className="input-group promo-input-group">
+                  <label>Nhập mã giảm giá</label>
+                  <div className="promo-input-row">
+                    <input
+                      type="text"
+                      value={promoCodeInput}
+                      onChange={(e) => setPromoCodeInput(e.target.value)}
+                      placeholder="Ví dụ: CBMS20"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyPromoCode}
+                      className="promo-apply-btn"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                  {promoError && <p className="promo-error">{promoError}</p>}
+                  {promoSuccess && <p className="promo-success">{promoSuccess}</p>}
+                </div>
+
+                {/* Available promotions list */}
+                <div className="promo-list-section">
+                  <h5>Ưu đãi đang có:</h5>
+                  {promotions.length === 0 ? (
+                    <p style={{ fontSize: '12px', color: '#6c757d', margin: 0, textAlign: 'left' }}>Không có chương trình ưu đãi nào tại chi nhánh này.</p>
+                  ) : (
+                    <div className="promo-grid">
+                      {promotions.map((promo) => {
+                        const isSelected = selectedPromotions.includes(promo._id);
+                        return (
+                          <div
+                            key={promo._id}
+                            className={`promo-card-item ${isSelected ? 'promo-card-item--selected' : ''}`}
+                            onClick={() => handleTogglePromotion(promo._id)}
+                          >
+                            <div className="promo-card-item__info">
+                              <span className="promo-code">
+                                🏷️ {promo.code}
+                              </span>
+                              <span className="promo-desc">
+                                {promo.description || `Giảm ${promo.discountType === 'percent' ? `${promo.discountValue}%` : formatCurrency(promo.discountValue)}`}
+                              </span>
+                              {promo.maxUsage !== null && (
+                                <span className="promo-usage" style={{ color: '#9ca3af', fontSize: '11px' }}>
+                                  Đã dùng: {promo.usedCount}/{promo.maxUsage}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className={`promo-select-btn ${isSelected ? 'promo-select-btn--remove' : ''}`}
+                            >
+                              {isSelected ? 'Bỏ chọn' : 'Chọn dùng'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Booking Invoice Breakdowns */}
               <div className="checkout-invoice-card">
                 <div className="invoice-row">
@@ -731,6 +903,12 @@ function BookingPage() {
                   <span>Tiền đồ ăn & uống:</span>
                   <span>{formatCurrency(productTotal)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="invoice-row" style={{ color: '#ef4444' }}>
+                    <span>Giảm giá (Khuyến mãi):</span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="invoice-row invoice-row--total">
                   <span>Tổng tiền thanh toán:</span>
                   <strong>{formatCurrency(grandTotal)}</strong>

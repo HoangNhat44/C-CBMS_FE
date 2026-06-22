@@ -763,3 +763,136 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* Promotion Elements in Checkout */
+.promo-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.promo-input-row input {
+  flex: 1;
+  text-transform: uppercase;
+}
+
+.promo-apply-btn {
+  padding: 8px 16px;
+  background-color: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.promo-apply-btn:hover {
+  background-color: var(--primary-hover);
+}
+
+.promo-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin: 4px 0 0 0;
+  text-align: left;
+}
+
+.promo-success {
+  color: var(--success);
+  font-size: 0.8rem;
+  margin: 4px 0 0 0;
+  text-align: left;
+}
+
+.promo-list-section {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.promo-list-section h5 {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  color: var(--neutral-700);
+}
+
+.promo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.promo-card-item {
+  border: 1px solid var(--neutral-200);
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.promo-card-item:hover {
+  border-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.promo-card-item--selected {
+  border: 2px solid var(--primary) !important;
+  background-color: rgba(79, 70, 229, 0.06) !important;
+}
+
+.promo-card-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.promo-card-item__info .promo-code {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--neutral-900);
+}
+
+.promo-card-item--selected .promo-code {
+  color: var(--primary);
+}
+
+.promo-card-item__info .promo-desc {
+  font-size: 0.8rem;
+  color: var(--neutral-700);
+}
+
+.promo-card-item__info .promo-usage {
+  font-size: 0.75rem;
+  color: var(--neutral-300);
+}
+
+.promo-select-btn {
+  padding: 6px 12px;
+  background-color: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.promo-select-btn:hover {
+  background-color: var(--primary-hover);
+}
+
+.promo-select-btn--remove {
+  background-color: var(--danger);
+}
+
+.promo-select-btn--remove:hover {
+  background-color: #dc2626;
+}
+

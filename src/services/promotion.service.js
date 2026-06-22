@@ -13,6 +13,11 @@ const promotionAPI = {
     return res.data;
   },
 
+  calculateDiscount: async (originalPrice, promotionIds) => {
+    const res = await apiClient.post(`${API_URL}/calculate`, { originalPrice, promotionIds });
+    return res.data;
+  },
+
   createPromotion: async (data) => {
     const res = await apiClient.post(API_URL, data);
     return res.data;

@@ -12,7 +12,6 @@ import OwnerDashboard from "./pages/dashboard/Owner";
 import StaffDashboard from "./pages/dashboard/Staff";
 import AdminDashboard from "./pages/dashboard/Admin";
 import LandingPage from "./pages/dashboard/Landingpage";
-import ApplyPromotion from "./pages/promotion/ApplyPromotion";
 
 function App() {
   return (
@@ -32,7 +31,6 @@ function App() {
         <Route path="/staff-dashboard" element={<StaffDashboard />} />
         <Route path="/landing-dashboard" element={<LandingPage />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/apply-promotion" element={<ApplyPromotion />} />
       </Routes>
     </BrowserRouter>
   );

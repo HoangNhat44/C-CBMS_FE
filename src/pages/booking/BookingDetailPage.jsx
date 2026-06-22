@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import bookingAPI from "../../services/booking.service";
 import paymentAPI from "../../services/payment.service";
 import PaymentQRModal from "../../components/PaymentQRModal";
+import Header from "../../components/Header";
 import "./BookingDetailPage.css";
 
 function BookingDetailPage() {
@@ -131,59 +132,35 @@ function BookingDetailPage() {
 
   if (loading) {
     return (
-      <main className="booking-page detail-page">
-        <aside className="booking-sidebar">
-          <div className="booking-sidebar__logo">
-            <h2>Café & Cinema</h2>
-            <p>Hệ thống đặt phòng phim tư nhân</p>
-          </div>
-          <nav className="booking-sidebar__nav">
-            <span className="booking-sidebar__section-title">Menu</span>
-            <button className="booking-sidebar__btn menu-nav-btn" onClick={() => navigate("/booking")}>
-              🗓️ Đặt phòng
-            </button>
-            <button className="booking-sidebar__btn menu-nav-btn" onClick={() => navigate("/bookinghistory")}>
-              📜 Lịch sử đặt phòng
-            </button>
-          </nav>
-        </aside>
-        <section className="booking-content detail-content">
-          <div className="booking-state booking-state--loading">
-            <div className="spinner"></div>
-            <p>Đang tải chi tiết đặt phòng...</p>
-          </div>
-        </section>
-      </main>
+      <>
+        <Header />
+        <main className="booking-page detail-page">
+          <section className="booking-content detail-content">
+            <div className="booking-state booking-state--loading">
+              <div className="spinner"></div>
+              <p>Đang tải chi tiết đặt phòng...</p>
+            </div>
+          </section>
+        </main>
+      </>
     );
   }
 
   if (error || !booking) {
     return (
-      <main className="booking-page detail-page">
-        <aside className="booking-sidebar">
-          <div className="booking-sidebar__logo">
-            <h2>Café & Cinema</h2>
-            <p>Hệ thống đặt phòng phim tư nhân</p>
-          </div>
-          <nav className="booking-sidebar__nav">
-            <span className="booking-sidebar__section-title">Menu</span>
-            <button className="booking-sidebar__btn menu-nav-btn" onClick={() => navigate("/booking")}>
-              🗓️ Đặt phòng
-            </button>
-            <button className="booking-sidebar__btn menu-nav-btn" onClick={() => navigate("/bookinghistory")}>
-              📜 Lịch sử đặt phòng
-            </button>
-          </nav>
-        </aside>
-        <section className="booking-content detail-content">
-          <div className="booking-state booking-state--error">
-            <p>{error || "Đơn hàng không tồn tại."}</p>
-            <button className="back-btn" onClick={() => navigate("/bookinghistory")}>
-              ← Quay lại lịch sử đặt phòng
-            </button>
-          </div>
-        </section>
-      </main>
+      <>
+        <Header />
+        <main className="booking-page detail-page">
+          <section className="booking-content detail-content">
+            <div className="booking-state booking-state--error">
+              <p>{error || "Đơn hàng không tồn tại."}</p>
+              <button className="back-btn" onClick={() => navigate("/bookinghistory")}>
+                ← Quay lại lịch sử đặt phòng
+              </button>
+            </div>
+          </section>
+        </main>
+      </>
     );
   }
 
@@ -194,26 +171,11 @@ function BookingDetailPage() {
   const finalCost = booking.finalTotal || (roomCost + productCost - (booking.discountAmount || 0));
 
   return (
-    <main className="booking-page detail-page">
-      {/* 1. Sidebar - Menu */}
-      <aside className="booking-sidebar">
-        <div className="booking-sidebar__logo">
-          <h2>Café & Cinema</h2>
-          <p>Hệ thống đặt phòng phim tư nhân</p>
-        </div>
-        <nav className="booking-sidebar__nav">
-          <span className="booking-sidebar__section-title">Menu</span>
-          <button className="booking-sidebar__btn menu-nav-btn" onClick={() => navigate("/booking")}>
-            🗓️ Đặt phòng
-          </button>
-          <button className="booking-sidebar__btn menu-nav-btn" onClick={() => navigate("/bookinghistory")}>
-            📜 Lịch sử đặt phòng
-          </button>
-        </nav>
-      </aside>
-
-      {/* 2. Detail Container */}
-      <section className="booking-content detail-content">
+    <>
+      <Header />
+      <main className="booking-page detail-page">
+        {/* 2. Detail Container */}
+        <section className="booking-content detail-content">
         <header className="detail-header">
           <button className="back-link-btn" onClick={() => navigate("/bookinghistory")}>
             ← Quay lại Lịch sử đặt phòng
@@ -398,6 +360,7 @@ function BookingDetailPage() {
         }}
       />
     </main>
+    </>
   );
 }
 
