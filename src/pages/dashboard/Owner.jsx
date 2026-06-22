@@ -6,7 +6,7 @@ import Sidebar from "../../components/Sidebar";
 import ChangePasswordModal from "../authentication/ChangePasswordModal";
 import PromotionList from "../promotion/PromotionList";
 
-const menuItems = [
+export const ownerMenuItems = [
   {
     section: "Tổng quan",
     items: [{ icon: "ti-chart-bar", label: "Doanh thu", badge: "Mới", key: "revenue" }],
@@ -147,9 +147,19 @@ export default function OwnerDashboard() {
     <div className="dash">
       {/* ── SIDEBAR ── */}
       <Sidebar 
-        menuItems={menuItems} 
+        menuItems={ownerMenuItems} 
         active={active} 
-        setActive={setActive} 
+        setActive={(key) => {
+          if (key === "room") {
+            navigate("/room");
+            return;
+          }
+          if (key === "news") {
+            navigate("/news");
+            return;
+          }
+          setActive(key);
+        }} 
         handleLogout={handleLogout} 
         onLogoClick={() => navigate("/owner-dashboard")}
       />
