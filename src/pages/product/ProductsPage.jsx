@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
-import { FaUtensils, FaMapMarkerAlt, FaTimes } from "react-icons/fa";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/Sidebar";
+import { ownerMenuItems } from "../dashboard/Owner";
+import { staffMenuItems } from "../dashboard/Staff";
+import ChangePasswordModal from "../authentication/ChangePasswordModal";
 import productService from "../../services/product.service";
 import branchService from "../../services/branch.service";
 import categoryService from "../../services/category.service";
 import "./ProductsPage.css";
 
-// Static categories for Iteration 1 mapping since Category BE is not on this branch
 const STATIC_CATEGORIES = [
   { _id: "655f46f4b6d4e82b8c9e0001", name: "Bắp rang bơ (Popcorn)" },
   { _id: "655f46f4b6d4e82b8c9e0002", name: "Nước ngọt (Beverages)" },
@@ -23,6 +26,25 @@ const initialForm = {
   isActive: true,
 };
 
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
+
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
+
 function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -33,25 +55,9 @@ function ProductsPage() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState(() => {
-    const role = localStorage.getItem("simulated_role") || "owner";
-    return role === "staff" ? "6a3148f6c7aee5bfd334c2b5" : "";
-  });
+  const [selectedBranch, setSelectedBranch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-
-  // Role simulation for testing (Huy B hasn't pushed login yet)
-  const [userRole, setUserRole] = useState(() => {
-    const role = localStorage.getItem("simulated_role") || "owner";
-    if (role === "owner" && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_owner_token_jwt");
-    } else if (role === "staff" && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_staff_token_jwt");
-    } else if (role === "customer" && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_customer_token_jwt");
-    }
-    return role;
-  });
 
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,6 +66,16 @@ function ProductsPage() {
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState(null);
+
+  // Layout states
+  const [user, setUser] = useState(null);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [cpModalOpen, setCpModalOpen] = useState(false);
+  const dropRef = useRef(null);
+  const navigate = useNavigate();
+
+  const isStaff = user?.role === "staff" || (!user?.role && localStorage.getItem("current_dashboard") === "staff");
+  const isOwner = user?.role === "owner" || (!user?.role && localStorage.getItem("current_dashboard") === "owner");
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -83,23 +99,58 @@ function ProductsPage() {
         console.error("Lỗi khi tải danh mục động, sử dụng danh mục tĩnh:", catErr);
       }
 
-      // 3. Fetch products (BE filters based on token/role automatically)
+      // 3. Fetch products
       const params = {};
       if (selectedCategory) params.categoryId = selectedCategory;
-      if (selectedBranch) params.branchId = selectedBranch;
+      
+      const tokenUser = decodeToken(localStorage.getItem("token"));
+      const isStaffUser = tokenUser?.role === "staff";
+      
+      if (isStaffUser && tokenUser?.branchId) {
+        params.branchId = tokenUser.branchId;
+      } else if (selectedBranch) {
+        params.branchId = selectedBranch;
+      }
       
       const productRes = await productService.getAllProducts(params);
       setProducts(productRes.data?.data || []);
     } catch (err) {
-      setError(err.response?.data?.error ? `${err.response.data.message}: ${err.response.data.error}` : (err.response?.data?.message || "Không thể tải danh sách dữ liệu"));
+      setError(
+        err.response?.data?.error
+          ? `${err.response.data.message}: ${err.response.data.error}`
+          : err.response?.data?.message || "Không thể tải danh sách dữ liệu"
+      );
     } finally {
       setLoading(false);
     }
   }, [selectedBranch, selectedCategory]);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = decodeToken(token);
+      if (decoded && decoded.exp * 1000 > Date.now()) {
+        setUser(decoded);
+        if (decoded.role === "staff" && decoded.branchId) {
+          setSelectedBranch(decoded.branchId);
+        }
+      } else {
+        localStorage.removeItem("token");
+      }
+    }
     fetchData();
   }, [fetchData]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Auto-hide success message after 5 seconds
   useEffect(() => {
@@ -121,28 +172,36 @@ function ProductsPage() {
     }
   }, [error]);
 
-  // Handle simulated role change
-  const handleRoleChange = (role) => {
-    setUserRole(role);
-    localStorage.setItem("simulated_role", role);
-    // Simulating token in localStorage to mimic Huy B's auth flow
-    if (role === "owner") {
-      localStorage.setItem("token", "simulated_owner_token_jwt");
-      setSelectedBranch("");
-    } else if (role === "staff") {
-      localStorage.setItem("token", "simulated_staff_token_jwt");
-      setSelectedBranch("6a3148f6c7aee5bfd334c2b5");
-    } else if (role === "customer") {
-      localStorage.setItem("token", "simulated_customer_token_jwt");
-      setSelectedBranch("");
-    } else {
-      localStorage.removeItem("token");
-      setSelectedBranch("");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setDropOpen(false);
+    navigate("/login", { replace: true });
+  };
+
+  const handleMenuChange = (key) => {
+    if (key === "product") return;
+    if (key === "category") {
+      navigate("/categories");
+      return;
     }
-    // Briefly await state change before calling fetchData
-    setTimeout(() => {
-      fetchData();
-    }, 50);
+    if (key === "review") {
+      navigate("/feedbacks");
+      return;
+    }
+    if (key === "room") {
+      navigate("/room");
+      return;
+    }
+    if (key === "roomtype") {
+      navigate("/roomtype");
+      return;
+    }
+    if (key === "news") {
+      navigate("/news");
+      return;
+    }
+    navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
   };
 
   const handleInputChange = (e) => {
@@ -171,7 +230,10 @@ function ProductsPage() {
   };
 
   const openAddModal = () => {
-    setForm(initialForm);
+    setForm({
+      ...initialForm,
+      categoryId: categories[0]?._id || STATIC_CATEGORIES[0]._id,
+    });
     setModalType("add");
     setIsModalOpen(true);
   };
@@ -193,8 +255,12 @@ function ProductsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const finalBranches = userRole === "staff" ? ["6a3148f6c7aee5bfd334c2b5"] : form.availableBranches;
-    if (!form.name || !form.price || finalBranches.length === 0) {
+    const isStaffUser = userRole === "staff";
+    
+    // For staff, branch is automatically linked in the BE, so we do not enforce client-side selection
+    const finalBranches = isStaffUser ? [] : form.availableBranches;
+    
+    if (!form.name || !form.price || (!isStaffUser && finalBranches.length === 0)) {
       setError("Vui lòng nhập đầy đủ Tên, Giá và chọn ít nhất 1 Chi nhánh");
       return;
     }
@@ -222,27 +288,15 @@ function ProductsPage() {
       setForm(initialForm);
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.error ? `${err.response.data.message}: ${err.response.data.error}` : (err.response?.data?.message || "Lỗi khi lưu thông tin sản phẩm"));
+      setError(
+        err.response?.data?.error
+          ? `${err.response.data.message}: ${err.response.data.error}`
+          : err.response?.data?.message || "Lỗi khi lưu thông tin sản phẩm"
+      );
     } finally {
       setSubmitting(false);
     }
   };
-
-  /*
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) return;
-
-    try {
-      setError("");
-      setSuccess("");
-      await productService.deleteProduct(id);
-      setSuccess("Xóa sản phẩm thành công!");
-      fetchData();
-    } catch (err) {
-      setError(err.response?.data?.error ? `${err.response.data.message}: ${err.response.data.error}` : (err.response?.data?.message || "Không thể xóa sản phẩm"));
-    }
-  };
-  */
 
   const handleToggleActive = async (product) => {
     try {
@@ -263,192 +317,255 @@ function ProductsPage() {
     }
   };
 
+  const initials = getInitials(user?.fullName || user?.email || "");
+  const userRole = isStaff ? "staff" : isOwner ? "owner" : "guest";
+  const isStaffOrOwner = isOwner || isStaff;
+
   // Client-side search and status filter
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // If client role is customer, BE already filters out inactive ones.
-    // This status filter is for Admin/Staff who can see both active and inactive.
+    // Status filter
     const matchesStatus = statusFilter === "" ? true : (statusFilter === "active" ? p.isActive : !p.isActive);
 
     return matchesSearch && matchesStatus;
   });
 
-  const isStaffOrOwner = userRole === "owner" || userRole === "staff";
+  const staffBranchName = user?.branchId?.name || "Chi nhánh của bạn";
 
   return (
-    <div className="products-container">
-      {/* Simulation Header */}
-      <div className="role-simulator">
-        <span className="role-simulator__label">Chế độ phân vai (test):</span>
-        <button 
-          className={`role-simulator__btn ${userRole === "owner" ? "active" : ""}`}
-          onClick={() => handleRoleChange("owner")}
-        >
-          Owner
-        </button>
-        <button 
-          className={`role-simulator__btn ${userRole === "staff" ? "active" : ""}`}
-          onClick={() => handleRoleChange("staff")}
-        >
-          Staff (Nhân viên)
-        </button>
+    <div className="dash">
+      <Sidebar
+        menuItems={isStaff ? staffMenuItems : ownerMenuItems}
+        active="product"
+        setActive={handleMenuChange}
+        handleLogout={handleLogout}
+        onLogoClick={() => navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard")}
+      />
 
-      </div>
-
-      <header className="products-header">
-        <div>
-          <span className="products-header__eyebrow">Quản Lý Thực Đơn</span>
-          <h1 className="products-header__title">Sản Phẩm & Đồ Ăn Kèm</h1>
-          <p className="products-header__desc">
-            Quản lý danh sách bắp nước, đồ ăn vặt và sản phẩm dịch vụ tại phòng chiếu phim.
-          </p>
-        </div>
-        {isStaffOrOwner && (
-          <button className="products-header__add-btn" onClick={openAddModal}>
-            + Thêm sản phẩm
-          </button>
-        )}
-      </header>
-
-      {/* Messages */}
-      {success && <div className="message-alert success">{success}</div>}
-      {error && <div className="message-alert error">{error}</div>}
-
-      {/* Filter Bar */}
-      <section className="filter-bar">
-        <input
-          type="text"
-          placeholder="Tìm tên sản phẩm, mô tả..."
-          className="filter-bar__search"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-
-        {userRole === "staff" ? (
-          <div className="filter-bar__static-branch">
-            <FaMapMarkerAlt style={{ marginRight: "6px", color: "#64748b" }} />
-            <span>Chi nhánh: Cinema Cafe Nguyen Trai</span>
+      <div className="main">
+        {/* Topbar */}
+        <div className="topbar">
+          <div className="topbar-left">
+            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
+            <span className="breadcrumb-active">Quản lý thực đơn</span>
           </div>
-        ) : (
-          <select
-            className="filter-bar__select"
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-          >
-            <option value="">Tất cả Chi nhánh</option>
-            {branches.map((b) => (
-              <option key={b._id} value={b._id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        )}
+          <div className="topbar-right">
+            <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
+              <div className="tb-avatar">{initials}</div>
+              <div>
+                <div className="tb-uname">{user?.fullName || user?.email}</div>
+                <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
+              </div>
+              <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
 
-        <select
-          className="filter-bar__select"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-          <option value="">Tất cả Loại sản phẩm</option>
-          {categories.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        {isStaffOrOwner && (
-          <select
-            className="filter-bar__select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">Tất cả Trạng thái</option>
-            <option value="active">Đang kinh doanh (Active)</option>
-            <option value="inactive">Tạm dừng (Inactive)</option>
-          </select>
-        )}
-      </section>
-
-      {/* Products Display */}
-      {loading ? (
-        <div className="state-display">Đang tải danh sách sản phẩm...</div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="state-display">Không tìm thấy sản phẩm nào phù hợp.</div>
-      ) : (
-        <div className="products-grid">
-          {filteredProducts.map((product) => {
-            const prodCategory = categories.find(c => c._id === (product.categoryId?._id || product.categoryId))?.name || "Khác";
-            return (
-              <article className="product-card" key={product._id} onClick={() => setSelectedDetailProduct(product)} style={{ cursor: "pointer" }}>
-                <div className="product-card__image-container">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="product-card__img" />
-                  ) : (
-                    <div className="product-card__placeholder"><FaUtensils /></div>
-                  )}
-                  <span className="product-card__category">{prodCategory}</span>
+              {dropOpen && (
+                <div className="products-user-menu" style={{
+                  position: "absolute", top: "calc(100% + 10px)", right: 0,
+                  background: "#fff", border: "1px solid var(--border)",
+                  borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
+                  minWidth: 180, zIndex: 200, overflow: "hidden",
+                }}>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDropOpen(false);
+                      setCpModalOpen(true);
+                    }}
+                    style={{
+                      width: "100%", padding: "11px 16px",
+                      background: "none", border: "none",
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
+                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                    }}
+                  >
+                    <i className="ti ti-key" />
+                    Đổi mật khẩu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    style={{
+                      width: "100%", padding: "11px 16px",
+                      background: "none", border: "none",
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontSize: 13, fontWeight: 700, color: "#b42318",
+                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                      borderTop: "1px solid var(--border-light)"
+                    }}
+                  >
+                    <i className="ti ti-logout" />
+                    Đăng xuất
+                  </button>
                 </div>
-                
-                <div className="product-card__content">
-                  <div className="product-card__title-row">
-                    <h3 className="product-card__name">{product.name}</h3>
-                    {isStaffOrOwner && (
-                      <span className={`product-card__status-badge ${product.isActive ? "active" : "inactive"}`}>
-                        {product.isActive ? "Kinh doanh" : "Tạm dừng"}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <p className="product-card__desc">{product.description || "Chưa có mô tả chi tiết."}</p>
-                  
-                  {userRole !== "staff" && (
-                    <div className="product-card__branches">
-                      <div className="product-card__branches-header">
-                        <FaMapMarkerAlt style={{ marginRight: "4px", color: "#0d9488" }} />
-                        <span>Bán tại:</span>
-                      </div>
-                      <div className="product-card__branch-badges">
-                        {product.availableBranches && product.availableBranches.length > 0 ? (
-                          product.availableBranches.map((b) => (
-                            <span key={b._id || b} className="branch-badge">
-                              {b.name || "Chi nhánh"}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="branch-badge empty">Chưa có chi nhánh</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="content">
+          <header className="products-header">
+            <div>
+              <h1 className="pg-title">Sản Phẩm & Đồ Ăn Kèm</h1>
+              <p className="pg-sub">
+                Quản lý danh sách bắp nước, đồ ăn vặt và sản phẩm dịch vụ tại phòng chiếu phim.
+              </p>
+            </div>
+            {isStaffOrOwner && (
+              <button className="btn-primary" onClick={openAddModal}>
+                <i className="ti ti-plus" /> Thêm sản phẩm
+              </button>
+            )}
+          </header>
+
+          {/* Messages */}
+          {success && <div className="message-alert success">{success}</div>}
+          {error && <div className="message-alert error">{error}</div>}
+
+          {/* Filter Bar */}
+          <section className="filter-bar">
+            <div className="filter-bar__search-container" style={{ position: "relative", flex: 1 }}>
+              <i className="ti ti-search" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+              <input
+                type="text"
+                placeholder="Tìm tên sản phẩm, mô tả..."
+                className="filter-bar__search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: "36px" }}
+              />
+            </div>
+
+            {userRole === "staff" ? (
+              <div className="filter-bar__static-branch" style={{ display: "flex", alignItems: "center", padding: "0 12px", fontSize: "14px", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "8px", background: "#f8fafc" }}>
+                <i className="ti ti-map-pin" style={{ marginRight: "6px" }} />
+                <span>Chi nhánh: {staffBranchName}</span>
+              </div>
+            ) : (
+              <select
+                className="filter-bar__select"
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+              >
+                <option value="">Tất cả Chi nhánh</option>
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <select
+              className="filter-bar__select"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="">Tất cả Loại sản phẩm</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+
+            {isStaffOrOwner && (
+              <select
+                className="filter-bar__select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Tất cả Trạng thái</option>
+                <option value="active">Đang kinh doanh (Active)</option>
+                <option value="inactive">Tạm dừng (Inactive)</option>
+              </select>
+            )}
+          </section>
+
+          {/* Products Display */}
+          {loading ? (
+            <div className="state-display">Đang tải danh sách sản phẩm...</div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="state-display">Không tìm thấy sản phẩm nào phù hợp.</div>
+          ) : (
+            <div className="products-grid">
+              {filteredProducts.map((product) => {
+                const prodCategory = categories.find(c => c._id === (product.categoryId?._id || product.categoryId))?.name || "Khác";
+                return (
+                  <article className="product-card" key={product._id} onClick={() => setSelectedDetailProduct(product)} style={{ cursor: "pointer" }}>
+                    <div className="product-card__image-container">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="product-card__img" />
+                      ) : (
+                        <div className="product-card__placeholder">
+                          <i className="ti ti-coffee" style={{ fontSize: "32px", color: "var(--text-faint)" }} />
+                        </div>
+                      )}
+                      <span className="product-card__category">{prodCategory}</span>
+                    </div>
+                    
+                    <div className="product-card__content">
+                      <div className="product-card__title-row">
+                        <h3 className="product-card__name">{product.name}</h3>
+                        {isStaffOrOwner && (
+                          <span className={`product-card__status-badge ${product.isActive ? "active" : "inactive"}`}>
+                            {product.isActive ? "Kinh doanh" : "Tạm dừng"}
+                          </span>
                         )}
                       </div>
-                    </div>
-                  )}
+                      
+                      <p className="product-card__desc">{product.description || "Chưa có mô tả chi tiết."}</p>
+                      
+                      {userRole !== "staff" && (
+                        <div className="product-card__branches">
+                          <div className="product-card__branches-header">
+                            <i className="ti ti-map-pin" style={{ marginRight: "4px", color: "#0d9488" }} />
+                            <span>Bán tại:</span>
+                          </div>
+                          <div className="product-card__branch-badges">
+                            {product.availableBranches && product.availableBranches.length > 0 ? (
+                              product.availableBranches.map((b) => (
+                                <span key={b._id || b} className="branch-badge">
+                                  {b.name || "Chi nhánh"}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="branch-badge empty">Chưa có chi nhánh</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-                  <div className="product-card__price-row">
-                    <span className="product-card__price-label">Giá bán:</span>
-                    <span className="product-card__price">{product.price.toLocaleString("vi-VN")} đ</span>
-                  </div>
+                      <div className="product-card__price-row">
+                        <span className="product-card__price-label">Giá bán:</span>
+                        <span className="product-card__price">{product.price.toLocaleString("vi-VN")} đ</span>
+                      </div>
 
-                  {isStaffOrOwner && (
-                    <div className="product-card__actions">
-                      <button 
-                        className={`btn-toggle-status ${product.isActive ? "active" : "inactive"}`} 
-                        onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
-                        title={product.isActive ? "Tạm dừng kinh doanh" : "Mở bán lại"}
-                      >
-                        {product.isActive ? "Tạm dừng" : "Kích hoạt"}
-                      </button>
-                      <button className="btn-edit" onClick={(e) => { e.stopPropagation(); openEditModal(product); }}>
-                        Sửa
-                      </button>
+                      {isStaffOrOwner && (
+                        <div className="product-card__actions">
+                          <button 
+                            className={`btn-toggle-status ${product.isActive ? "active" : "inactive"}`} 
+                            onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
+                            title={product.isActive ? "Tạm dừng kinh doanh" : "Mở bán lại"}
+                          >
+                            {product.isActive ? "Tạm dừng" : "Kích hoạt"}
+                          </button>
+                          <button className="btn-edit" onClick={(e) => { e.stopPropagation(); openEditModal(product); }}>
+                            Sửa
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
@@ -456,7 +573,9 @@ function ProductsPage() {
           <div className="modal-content">
             <div className="modal-header">
               <h2>{modalType === "add" ? "Thêm sản phẩm mới" : "Chỉnh sửa sản phẩm"}</h2>
-              <button className="modal-close" onClick={() => setIsModalOpen(false)}><FaTimes /></button>
+              <button className="modal-close" onClick={() => setIsModalOpen(false)}>
+                <i className="ti ti-x" />
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="modal-form">
@@ -576,14 +695,18 @@ function ProductsPage() {
           <div className="modal-content product-detail-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Chi tiết sản phẩm</h2>
-              <button className="modal-close" onClick={() => setSelectedDetailProduct(null)}><FaTimes /></button>
+              <button className="modal-close" onClick={() => setSelectedDetailProduct(null)}>
+                <i className="ti ti-x" />
+              </button>
             </div>
             <div className="modal-body product-detail-body">
               <div className="detail-image-container">
                 {selectedDetailProduct.image ? (
                   <img src={selectedDetailProduct.image} alt={selectedDetailProduct.name} className="detail-image" />
                 ) : (
-                  <div className="detail-placeholder"><FaUtensils /></div>
+                  <div className="detail-placeholder">
+                    <i className="ti ti-coffee" style={{ fontSize: "32px", color: "var(--text-faint)" }} />
+                  </div>
                 )}
               </div>
               <div className="detail-info">
@@ -603,12 +726,12 @@ function ProductsPage() {
                 </div>
                 {userRole !== "staff" && (
                   <div className="detail-item">
-                    <strong>Bán tại chi nhánh:</strong>
-                    <div className="detail-branches">
-                      {selectedDetailProduct.availableBranches && selectedDetailProduct.availableBranches.length > 0
-                        ? selectedDetailProduct.availableBranches.map(b => b.name || "Chi nhánh").join(", ")
-                        : "Chưa có chi nhánh"}
-                    </div>
+                     <strong>Bán tại chi nhánh:</strong>
+                     <div className="detail-branches">
+                       {selectedDetailProduct.availableBranches && selectedDetailProduct.availableBranches.length > 0
+                         ? selectedDetailProduct.availableBranches.map(b => b.name || "Chi nhánh").join(", ")
+                         : "Chưa có chi nhánh"}
+                     </div>
                   </div>
                 )}
               </div>
@@ -619,6 +742,8 @@ function ProductsPage() {
           </div>
         </div>
       )}
+
+      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }

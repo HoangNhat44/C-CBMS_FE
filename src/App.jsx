@@ -16,6 +16,9 @@ import ApplyPromotion from "./pages/promotion/ApplyPromotion";
 import RoomPage from "./pages/room/RoomPage";
 import NewsPage from "./pages/news/NewsPage";
 import RoomTypePage from "./pages/roomType/RoomTypePage";
+import ProductsPage from "./pages/product/ProductsPage";
+import CategoriesPage from "./pages/category/CategoriesPage";
+import FeedbacksPage from "./pages/feedback/FeedbacksPage";
 
 function App() {
   return (
@@ -39,6 +42,9 @@ function App() {
         <Route path="/room" element={<RoomPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/roomtype" element={<RoomTypePage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/feedbacks" element={<FeedbacksPage />} />
       </Routes>
     </BrowserRouter>
   );

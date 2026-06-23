@@ -31,6 +31,7 @@ export default function Header() {
   const currentPath = location.pathname;
 
   useEffect(() => {
+    localStorage.removeItem("current_dashboard");
     const token = localStorage.getItem("token");
     if (token) {
       const decoded = decodeToken(token);
@@ -76,7 +77,7 @@ export default function Header() {
           <Link to="/booking" className={`nav-link ${currentPath === "/booking" ? "active" : ""}`}>Đặt Phòng</Link>
           <Link to="/bookinghistory" className={`nav-link ${currentPath === "/bookinghistory" ? "active" : ""}`}>Lịch sử đặt phòng</Link>
           <a href="#" className="nav-link">Bảng tin</a>
-          <a href="#" className="nav-link">Đánh giá</a>
+          <Link to="/feedbacks" className={`nav-link ${currentPath === "/feedbacks" ? "active" : ""}`}>Đánh giá</Link>
         </div>
 
         <div className="nav-auth">

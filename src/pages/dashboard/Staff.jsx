@@ -4,13 +4,19 @@ import "./Dashboard.css"; // đường dẫn tuỳ cấu trúc project
 import Sidebar from "../../components/Sidebar";
 import ChangePasswordModal from "../authentication/ChangePasswordModal";
 
-const menuItems = [
+export const staffMenuItems = [
   {
     section: "Quản lý",
     items: [
       { icon: "ti-category", label: "Danh mục", key: "category" },
       { icon: "ti-package", label: "Sản phẩm", key: "product" },
       { icon: "ti-sparkles", label: "Dịch vụ đi kèm", key: "service" },
+    ],
+  },
+  {
+    section: "Khách hàng",
+    items: [
+      { icon: "ti-star", label: "Đánh giá khách hàng", key: "review" },
     ],
   },
   {
@@ -97,6 +103,7 @@ export default function StaffDashboard() {
   }
 
   useEffect(() => {
+    localStorage.setItem("current_dashboard", "staff");
     const token = localStorage.getItem("token");
     if (token) {
       const decoded = decodeToken(token);
@@ -131,9 +138,23 @@ export default function StaffDashboard() {
 
       {/* ── SIDEBAR ── */}
       <Sidebar 
-        menuItems={menuItems} 
+        menuItems={staffMenuItems} 
         active={active} 
-        setActive={setActive} 
+        setActive={(key) => {
+          if (key === "category") {
+            navigate("/categories");
+            return;
+          }
+          if (key === "product") {
+            navigate("/products");
+            return;
+          }
+          if (key === "review") {
+            navigate("/feedbacks");
+            return;
+          }
+          setActive(key);
+        }} 
         handleLogout={handleLogout} 
         onLogoClick={() => navigate("/staff-dashboard")}
       />

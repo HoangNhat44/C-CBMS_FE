@@ -16,7 +16,15 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Add token if available
-    const token = localStorage.getItem('token');
+    let token = localStorage.getItem('token');
+    if (!token) {
+      const currentDashboard = localStorage.getItem('current_dashboard');
+      if (currentDashboard === 'staff') {
+        token = 'simulated_staff_token_jwt';
+      } else if (currentDashboard === 'owner') {
+        token = 'simulated_owner_token_jwt';
+      }
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

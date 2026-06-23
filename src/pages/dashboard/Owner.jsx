@@ -114,6 +114,7 @@ export default function OwnerDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    localStorage.setItem("current_dashboard", "owner");
     const token = localStorage.getItem("token");
     if (token) {
       const decoded = decodeToken(token);
@@ -161,6 +162,18 @@ export default function OwnerDashboard() {
           }
           if (key === "news") {
             navigate("/news");
+            return;
+          }
+          if (key === "category") {
+            navigate("/categories");
+            return;
+          }
+          if (key === "product") {
+            navigate("/products");
+            return;
+          }
+          if (key === "review") {
+            navigate("/feedbacks");
             return;
           }
           setActive(key);

@@ -1,51 +1,41 @@
-import { useEffect, useState, useCallback } from "react";
-import { 
-  FaStar, 
-  FaRegStar, 
-  FaTimes, 
-  FaPlus, 
-  FaSearch, 
-  FaTrashAlt, 
-  FaEye, 
-  FaEyeSlash, 
-  FaCheckCircle, 
-  FaInfoCircle,
-  FaCalendarAlt,
-  FaRegCommentDots,
-  FaMapMarkerAlt
-} from "react-icons/fa";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/Sidebar";
+import Header from "../../components/Header";
+import { ownerMenuItems } from "../dashboard/Owner";
+import { staffMenuItems } from "../dashboard/Staff";
+import ChangePasswordModal from "../authentication/ChangePasswordModal";
 import feedbackService from "../../services/feedback.service";
 import branchService from "../../services/branch.service";
 import "./FeedbacksPage.css";
 
-const mockBookings = [
-  {
-    _id: "6a3936aa974188f7b1badcc5",
-    userId: "6a38f6096149376ca36423a0",
-    branchId: "6a3148f6c7aee5bfd334c2b6",
-    slotId: "6a3148f8c7aee5bfd334c2c7",
-    date: "2026-01-21T04:00:00.000Z",
-    amount: 180000,
-    status: "completed",
-    note: "Generated booking for 1/21/2026"
-  },
-  {
-    _id: "6a3936aa974188f7b1badcc6",
-    userId: "6a38f6096149376ca36423a0",
-    branchId: "6a3148f6c7aee5bfd334c2b6",
-    slotId: "6a3148f8c7aee5bfd334c2c8",
-    date: "2026-01-17T03:00:00.000Z",
-    amount: 400000,
-    status: "completed",
-    note: "Generated booking for 1/17/2026"
-  }
-];
+// Danh sách đơn đặt phòng của khách hàng đăng nhập - Leader sẽ tích hợp API thực tế tại đây
+const mockBookings = [];
 
 const initialForm = {
   bookingId: "",
   rating: 5,
   comment: "",
 };
+
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
+
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
 
 function FeedbacksPage() {
   const [feedbacks, setFeedbacks] = useState([]);
@@ -60,19 +50,6 @@ function FeedbacksPage() {
   const [ratingFilter, setRatingFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
 
-  // Role simulation
-  const [userRole, setUserRole] = useState(() => {
-    const role = localStorage.getItem("simulated_role") || "owner";
-    if (role === "owner" && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_owner_token_jwt");
-    } else if (role === "staff" && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_staff_token_jwt");
-    } else if (role === "customer" && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_customer_token_jwt");
-    }
-    return role;
-  });
-
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
@@ -80,6 +57,16 @@ function FeedbacksPage() {
   const [hoveredStar, setHoveredStar] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  // Layout states
+  const [user, setUser] = useState(null);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [cpModalOpen, setCpModalOpen] = useState(false);
+  const dropRef = useRef(null);
+  const navigate = useNavigate();
+
+  const isStaff = user?.role === "staff" || (!user?.role && localStorage.getItem("current_dashboard") === "staff");
+  const isOwner = user?.role === "owner" || (!user?.role && localStorage.getItem("current_dashboard") === "owner");
 
   const openAddModal = () => {
     const reviewedIds = feedbacks.map((f) => f.bookingId?._id || f.bookingId);
@@ -152,8 +139,6 @@ function FeedbacksPage() {
     }
   }, []);
 
-
-
   // Fetch feedbacks matching current filters
   const fetchFeedbacks = useCallback(async () => {
     try {
@@ -161,7 +146,16 @@ function FeedbacksPage() {
       setError("");
 
       const params = {};
-      if (branchFilter) params.branchId = branchFilter;
+      
+      const tokenUser = decodeToken(localStorage.getItem("token"));
+      const isStaffUser = tokenUser?.role === "staff";
+      
+      if (isStaffUser && tokenUser?.branchId) {
+        params.branchId = tokenUser.branchId;
+      } else if (branchFilter) {
+        params.branchId = branchFilter;
+      }
+      
       if (ratingFilter) params.rating = ratingFilter;
       if (searchTerm) params.search = searchTerm;
       if (sortBy) params.sortBy = sortBy;
@@ -179,12 +173,35 @@ function FeedbacksPage() {
 
   // Load initial data
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = decodeToken(token);
+      if (decoded && decoded.exp * 1000 > Date.now()) {
+        setUser(decoded);
+        if (decoded.role === "staff" && decoded.branchId) {
+          setBranchFilter(decoded.branchId);
+        }
+      } else {
+        localStorage.removeItem("token");
+      }
+    }
     fetchBranches();
   }, [fetchBranches]);
 
   useEffect(() => {
     fetchFeedbacks();
-  }, [fetchFeedbacks, userRole]);
+  }, [fetchFeedbacks]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Auto-hide messages after 5 seconds
   useEffect(() => {
@@ -201,27 +218,37 @@ function FeedbacksPage() {
     }
   }, [error]);
 
-  // Handle Simulated Role Change
-  const handleRoleChange = (role) => {
-    setUserRole(role);
-    localStorage.setItem("simulated_role", role);
-    if (role === "owner") {
-      localStorage.setItem("token", "simulated_owner_token_jwt");
-      setBranchFilter("");
-    } else if (role === "staff") {
-      localStorage.setItem("token", "simulated_staff_token_jwt");
-      setBranchFilter("6a3148f6c7aee5bfd334c2b5");
-    } else if (role === "customer") {
-      localStorage.setItem("token", "simulated_customer_token_jwt");
-      setBranchFilter("");
-    } else {
-      localStorage.removeItem("token");
-      setBranchFilter("");
-    }
-    setError("");
-    setSuccess("");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setDropOpen(false);
+    navigate("/login", { replace: true });
   };
 
+  const handleMenuChange = (key) => {
+    if (key === "review") return;
+    if (key === "category") {
+      navigate("/categories");
+      return;
+    }
+    if (key === "product") {
+      navigate("/products");
+      return;
+    }
+    if (key === "room") {
+      navigate("/room");
+      return;
+    }
+    if (key === "roomtype") {
+      navigate("/roomtype");
+      return;
+    }
+    if (key === "news") {
+      navigate("/news");
+      return;
+    }
+    navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
+  };
 
   // Delete feedback (Staff / Owner only)
   const handleDeleteFeedback = async (id) => {
@@ -318,281 +345,332 @@ function FeedbacksPage() {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       if (i <= rating) {
-        stars.push(<FaStar key={i} className="star-icon active" />);
+        stars.push(<i key={i} className="ti ti-star-filled star-icon active" style={{ color: "#f59e0b" }} />);
       } else {
-        stars.push(<FaRegStar key={i} className="star-icon" />);
+        stars.push(<i key={i} className="ti ti-star star-icon" style={{ color: "#cbd5e1" }} />);
       }
     }
     return stars;
   };
 
+  const initials = getInitials(user?.fullName || user?.email || "");
+  const isStaffOrOwner = isStaff || isOwner;
+  const userRole = user?.role || (isStaff ? "staff" : isOwner ? "owner" : "guest");
+  const staffBranchName = user?.branchId?.name || "Chi nhánh của bạn";
+
   return (
-    <div className="feedbacks-container">
-      {/* Role Simulator Bar */}
-      <div className="role-simulator-bar">
-        <span className="role-simulator-label">Vai trò giả lập (Kiểm thử):</span>
-        <div className="role-simulator-buttons">
-          <button 
-            className={`role-btn ${userRole === "owner" ? "active owner" : ""}`}
-            onClick={() => handleRoleChange("owner")}
-          >
-            Owner (Quản trị)
-          </button>
-          <button 
-            className={`role-btn ${userRole === "staff" ? "active staff" : ""}`}
-            onClick={() => handleRoleChange("staff")}
-          >
-            Staff (Nhân viên)
-          </button>
-          <button 
-            className={`role-btn ${userRole === "customer" ? "active customer" : ""}`}
-            onClick={() => handleRoleChange("customer")}
-          >
-            Customer (Khách hàng)
-          </button>
-          <button 
-            className={`role-btn ${userRole === "guest" ? "active guest" : ""}`}
-            onClick={() => handleRoleChange("guest")}
-          >
-            Guest (Khách vãng lai)
-          </button>
-        </div>
-      </div>
-
-      {/* Header Title */}
-      <div className="feedbacks-header-row">
-        <div>
-          <h1 className="feedbacks-title">Đánh giá & Phản hồi</h1>
-          <p className="feedbacks-subtitle">
-            Xem và quản lý các ý kiến, xếp hạng sao từ khách hàng sử dụng dịch vụ đặt phòng chiếu.
-          </p>
-        </div>
-        {userRole === "customer" && (
-          <button className="btn-add-feedback" onClick={openAddModal}>
-            <FaPlus /> Viết đánh giá
-          </button>
-        )}
-      </div>
-
-      {/* Feedback Alerts */}
-      {success && (
-        <div className="alert-message alert-success">
-          <FaCheckCircle /> <span>{success}</span>
-        </div>
-      )}
-      {error && (
-        <div className="alert-message alert-error">
-          <FaInfoCircle /> <span>{error}</span>
-        </div>
-      )}
-
-      {/* Statistics Analytics Panel */}
-      <div className="analytics-grid">
-        <div className="analytics-card average-rating-card">
-          <div className="average-rating-num">{averageRating}</div>
-          <div className="average-rating-stars">
-            {renderStars(Math.round(Number(averageRating)))}
-          </div>
-          <div className="average-rating-total">
-            Tổng cộng <strong>{totalReviews}</strong> đánh giá
-          </div>
-        </div>
-
-        <div className="analytics-card distribution-card">
-          <h3 className="distribution-title">Phân bổ xếp hạng</h3>
-          <div className="distribution-list">
-            {[5, 4, 3, 2, 1].map((star) => {
-              const count = starCounts[star];
-              const pct = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-              return (
-                <div key={star} className="distribution-row">
-                  <span className="dist-star-label">{star} <FaStar className="star-mini" /></span>
-                  <div className="dist-progress-bg">
-                    <div 
-                      className="dist-progress-fill" 
-                      style={{ width: `${pct}%` }}
-                    ></div>
-                  </div>
-                  <span className="dist-count-label">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Query Controls */}
-      <div className="filters-card">
-        <div className="filters-row">
-          {/* Search keyword */}
-          <div className="filter-group search-group">
-            <label className="filter-label">Tìm kiếm từ khóa</label>
-            <div className="search-input-wrapper">
-              <FaSearch className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Tìm kiếm nội dung đánh giá..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="filter-input search-input"
-              />
-            </div>
-          </div>
-
-          {/* Branch Filter */}
-          <div className="filter-group">
-            <label className="filter-label">Chi nhánh</label>
-            {userRole === "staff" ? (
-              <div className="filter-static-branch">
-                <FaMapMarkerAlt style={{ marginRight: "6px", color: "#64748b" }} />
-                <span>Cinema Cafe Nguyen Trai</span>
-              </div>
-            ) : (
-              <select 
-                value={branchFilter}
-                onChange={(e) => setBranchFilter(e.target.value)}
-                className="filter-input"
-              >
-                <option value="">Tất cả chi nhánh</option>
-                {branches.map((b) => (
-                  <option key={b._id} value={b._id}>{b.name}</option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Rating Filter */}
-          <div className="filter-group">
-            <label className="filter-label">Số sao</label>
-            <select 
-              value={ratingFilter}
-              onChange={(e) => setRatingFilter(e.target.value)}
-              className="filter-input"
-            >
-              <option value="">Tất cả xếp hạng</option>
-              <option value="5">5 sao</option>
-              <option value="4">4 sao</option>
-              <option value="3">3 sao</option>
-              <option value="2">2 sao</option>
-              <option value="1">1 sao</option>
-            </select>
-          </div>
-
-          {/* Sorting Option */}
-          <div className="filter-group">
-            <label className="filter-label">Sắp xếp</label>
-            <select 
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="filter-input"
-            >
-              <option value="newest">Mới nhất trước</option>
-              <option value="highestRating">Đánh giá cao nhất</option>
-              <option value="lowestRating">Đánh giá thấp nhất</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Loading state */}
-      {loading ? (
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Đang tải danh sách phản hồi...</p>
-        </div>
-      ) : feedbacks.length === 0 ? (
-        <div className="no-data-card">
-          <FaRegCommentDots className="no-data-icon" />
-          <h3>Không tìm thấy phản hồi nào</h3>
-          <p>Thử thay đổi bộ lọc tìm kiếm hoặc viết một đánh giá mới.</p>
-        </div>
+    <div className={isStaffOrOwner ? "dash" : "booking-page-layout"}>
+      {isStaffOrOwner ? (
+        <Sidebar
+          menuItems={isStaff ? staffMenuItems : ownerMenuItems}
+          active="review"
+          setActive={handleMenuChange}
+          handleLogout={handleLogout}
+          onLogoClick={() => navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard")}
+        />
       ) : (
-        /* Feedback Grid List */
-        <div className="feedbacks-grid">
-          {feedbacks.map((item) => {
-            const isStaffOrOwner = ["owner", "staff"].includes(userRole);
-            const submissionDate = new Date(item.createdAt).toLocaleDateString("vi-VN", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit"
-            });
+        <Header />
+      )}
 
-            return (
-              <div 
-                key={item._id} 
-                className={`feedback-card ${!item.isVisible ? "hidden-feedback" : ""}`}
-              >
-
-
-                {/* Card Header: User Avatar & Name */}
-                <div className="feedback-card-header">
-                  <div className="user-avatar">
-                    {item.customerId?.image ? (
-                      <img src={item.customerId.image} alt={item.customerId.fullName} />
-                    ) : (
-                      <div className="avatar-placeholder">
-                        {item.customerId?.fullName?.charAt(0).toUpperCase() || "K"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="user-meta">
-                    <h4 className="user-name">{item.customerId?.fullName || "Khách ẩn danh"}</h4>
-                    <p className="user-email">{item.customerId?.email || ""}</p>
-                  </div>
+      <div className={isStaffOrOwner ? "main" : "public-main-content"} style={isStaffOrOwner ? {} : { maxWidth: 1200, margin: "0 auto", padding: "24px 16px" }}>
+        {isStaffOrOwner && (
+          <div className="topbar">
+            <div className="topbar-left">
+              <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
+              <span className="breadcrumb-active">Đánh giá khách hàng</span>
+            </div>
+            <div className="topbar-right">
+              <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
+                <div className="tb-avatar">{initials}</div>
+                <div>
+                  <div className="tb-uname">{user?.fullName || user?.email}</div>
+                  <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
                 </div>
+                <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
 
-                {/* Rating Stars */}
-                <div className="card-rating-row">
-                  <div className="card-stars">{renderStars(item.rating)}</div>
-                  <span className="card-date"><FaCalendarAlt className="date-icon" /> {submissionDate}</span>
-                </div>
-
-                {/* Booking & Branch tags */}
-                <div className="card-tags-row">
-                  <span className="tag-chip tag-branch">
-                    {item.branchId?.name || "Chi nhánh khác"}
-                  </span>
-                  <span className="tag-chip tag-room">
-                    Phòng: {item.roomId?.roomName || "N/A"}
-                  </span>
-                </div>
-
-                {/* Comment content */}
-                <div className="feedback-comment-content">
-                  "{item.comment || "Không có bình luận viết tay."}"
-                </div>
-
-                {/* Staff Control Buttons removed for Read-only Owner/Staff roles */}
-
-                {/* Customer Edit/Delete Buttons (Own Feedback Only) */}
-                {userRole === "customer" && (
-                  ["6a37585ba60654f216467814", "6a2ff8b8b0b4281986ed6826", "6a2ff8b8b0b4281986ed6835", "6a2ff8b8b0b4281986ed6836", "6a38f6096149376ca36423a0"]
-                    .includes(item.customerId?._id || item.customerId)
-                ) && (
-                  <div className="feedback-card-actions">
-                    <button 
-                      className="btn-action btn-toggle-visible show"
-                      onClick={() => openEditModal(item)}
-                      title="Chỉnh sửa đánh giá"
+                {dropOpen && (
+                  <div className="feedbacks-user-menu" style={{
+                    position: "absolute", top: "calc(100% + 10px)", right: 0,
+                    background: "#fff", border: "1px solid var(--border)",
+                    borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
+                    minWidth: 180, zIndex: 200, overflow: "hidden",
+                  }}>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDropOpen(false);
+                        setCpModalOpen(true);
+                      }}
+                      style={{
+                        width: "100%", padding: "11px 16px",
+                        background: "none", border: "none",
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
+                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                      }}
                     >
-                      Sửa đánh giá
+                      <i className="ti ti-key" />
+                      Đổi mật khẩu
                     </button>
-                    <button 
-                      className="btn-action btn-delete-feedback"
-                      onClick={() => handleDeleteFeedback(item._id)}
-                      title="Xóa đánh giá"
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      style={{
+                        width: "100%", padding: "11px 16px",
+                        background: "none", border: "none",
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontSize: 13, fontWeight: 700, color: "#b42318",
+                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                        borderTop: "1px solid var(--border-light)"
+                      }}
                     >
-                      <FaTrashAlt /> Xóa
+                      <i className="ti ti-logout" />
+                      Đăng xuất
                     </button>
                   </div>
                 )}
               </div>
-            );
-          })}
+            </div>
+          </div>
+        )}
+
+        <div className="content">
+          {/* Header Title */}
+          <div className="feedbacks-header-row">
+            <div>
+              <h1 className="pg-title">Đánh giá & Phản hồi</h1>
+              <p className="pg-sub">
+                Xem và quản lý các ý kiến, xếp hạng sao từ khách hàng sử dụng dịch vụ đặt phòng chiếu.
+              </p>
+            </div>
+            {userRole === "customer" && (
+              <button className="btn-add-feedback btn-primary" onClick={openAddModal}>
+                <i className="ti ti-plus" /> Viết đánh giá
+              </button>
+            )}
+          </div>
+
+          {/* Feedback Alerts */}
+          {success && (
+            <div className="message-alert success">
+              <i className="ti ti-circle-check" style={{ marginRight: 8 }} /> <span>{success}</span>
+            </div>
+          )}
+          {error && (
+            <div className="message-alert error">
+              <i className="ti ti-info-circle" style={{ marginRight: 8 }} /> <span>{error}</span>
+            </div>
+          )}
+
+          {/* Statistics Analytics Panel */}
+          <div className="analytics-grid">
+            <div className="analytics-card average-rating-card">
+              <div className="average-rating-num">{averageRating}</div>
+              <div className="average-rating-stars">
+                {renderStars(Math.round(Number(averageRating)))}
+              </div>
+              <div className="average-rating-total">
+                Tổng cộng <strong>{totalReviews}</strong> đánh giá
+              </div>
+            </div>
+
+            <div className="analytics-card distribution-card">
+              <h3 className="distribution-title">Phân bổ xếp hạng</h3>
+              <div className="distribution-list">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = starCounts[star];
+                  const pct = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                  return (
+                    <div key={star} className="distribution-row">
+                      <span className="dist-star-label">
+                        {star} <i className="ti ti-star-filled star-mini" style={{ color: "#fbbf24" }} />
+                      </span>
+                      <div className="dist-progress-bg">
+                        <div 
+                          className="dist-progress-fill" 
+                          style={{ width: `${pct}%` }}
+                        ></div>
+                      </div>
+                      <span className="dist-count-label">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Filter and Query Controls */}
+          <div className="filters-card">
+            <div className="filters-row">
+              {/* Search keyword */}
+              <div className="filter-group search-group">
+                <label className="filter-label">Tìm kiếm từ khóa</label>
+                <div className="search-input-wrapper">
+                  <i className="ti ti-search search-icon" style={{ left: "12px", position: "absolute", color: "#94a3b8" }} />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm nội dung đánh giá..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="filter-input search-input"
+                    style={{ paddingLeft: "36px" }}
+                  />
+                </div>
+              </div>
+
+              {/* Branch Filter */}
+              <div className="filter-group">
+                <label className="filter-label">Chi nhánh</label>
+                {userRole === "staff" ? (
+                  <div className="filter-static-branch">
+                    <i className="ti ti-map-pin" style={{ marginRight: "6px", color: "#64748b" }} />
+                    <span>{staffBranchName}</span>
+                  </div>
+                ) : (
+                  <select 
+                    value={branchFilter}
+                    onChange={(e) => setBranchFilter(e.target.value)}
+                    className="filter-input"
+                  >
+                    <option value="">Tất cả chi nhánh</option>
+                    {branches.map((b) => (
+                      <option key={b._id} value={b._id}>{b.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Rating Filter */}
+              <div className="filter-group">
+                <label className="filter-label">Số sao</label>
+                <select 
+                  value={ratingFilter}
+                  onChange={(e) => setRatingFilter(e.target.value)}
+                  className="filter-input"
+                >
+                  <option value="">Tất cả xếp hạng</option>
+                  <option value="5">5 sao</option>
+                  <option value="4">4 sao</option>
+                  <option value="3">3 sao</option>
+                  <option value="2">2 sao</option>
+                  <option value="1">1 sao</option>
+                </select>
+              </div>
+
+              {/* Sorting Option */}
+              <div className="filter-group">
+                <label className="filter-label">Sắp xếp</label>
+                <select 
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="filter-input"
+                >
+                  <option value="newest">Mới nhất trước</option>
+                  <option value="highestRating">Đánh giá cao nhất</option>
+                  <option value="lowestRating">Đánh giá thấp nhất</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading state */}
+          {loading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Đang tải danh sách phản hồi...</p>
+            </div>
+          ) : feedbacks.length === 0 ? (
+            <div className="no-data-card">
+              <i className="ti ti-message no-data-icon" style={{ fontSize: "3rem", color: "#94a3b8" }} />
+              <h3>Không tìm thấy phản hồi nào</h3>
+              <p>Thử thay đổi bộ lọc tìm kiếm hoặc viết một đánh giá mới.</p>
+            </div>
+          ) : (
+            /* Feedback Grid List */
+            <div className="feedbacks-grid">
+              {feedbacks.map((item) => {
+                const submissionDate = new Date(item.createdAt).toLocaleDateString("vi-VN", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+
+                return (
+                  <div 
+                    key={item._id} 
+                    className={`feedback-card ${!item.isVisible ? "hidden-feedback" : ""}`}
+                  >
+                    {/* Card Header: User Avatar & Name */}
+                    <div className="feedback-card-header">
+                      <div className="user-avatar">
+                        {item.customerId?.image ? (
+                          <img src={item.customerId.image} alt={item.customerId.fullName} />
+                        ) : (
+                          <div className="avatar-placeholder">
+                            {item.customerId?.fullName?.charAt(0).toUpperCase() || "K"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="user-meta">
+                        <h4 className="user-name">{item.customerId?.fullName || "Khách ẩn danh"}</h4>
+                        <p className="user-email">{item.customerId?.email || ""}</p>
+                      </div>
+                    </div>
+
+                    {/* Rating Stars */}
+                    <div className="card-rating-row">
+                      <div className="card-stars">{renderStars(item.rating)}</div>
+                      <span className="card-date">
+                        <i className="ti ti-calendar date-icon" style={{ marginRight: 4 }} /> {submissionDate}
+                      </span>
+                    </div>
+
+                    {/* Booking & Branch tags */}
+                    <div className="card-tags-row">
+                      <span className="tag-chip tag-branch">
+                        {item.branchId?.name || "Chi nhánh khác"}
+                      </span>
+                      <span className="tag-chip tag-room">
+                        Phòng: {item.roomId?.roomName || "N/A"}
+                      </span>
+                    </div>
+
+                    {/* Comment content */}
+                    <div className="feedback-comment-content">
+                      "{item.comment || "Không có bình luận viết tay."}"
+                    </div>
+
+                    {/* Customer Edit/Delete Buttons (Own Feedback Only) */}
+                    {userRole === "customer" && (
+                      (item.customerId?._id || item.customerId) === user?.userId
+                    ) && (
+                      <div className="feedback-card-actions">
+                        <button 
+                          className="btn-action btn-toggle-visible show"
+                          onClick={() => openEditModal(item)}
+                          title="Chỉnh sửa đánh giá"
+                        >
+                          Sửa đánh giá
+                        </button>
+                        <button 
+                          className="btn-action btn-delete-feedback"
+                          onClick={() => handleDeleteFeedback(item._id)}
+                          title="Xóa đánh giá"
+                        >
+                          <i className="ti ti-trash" /> Xóa
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Write Feedback Modal (Customer Role Only) */}
       {isModalOpen && (
@@ -601,7 +679,7 @@ function FeedbacksPage() {
             <div className="modal-header">
               <h3>{isEditing ? "Chỉnh sửa đánh giá dịch vụ" : "Đánh giá dịch vụ đặt phòng"}</h3>
               <button className="btn-close-modal" onClick={() => setIsModalOpen(false)}>
-                <FaTimes />
+                <i className="ti ti-x" />
               </button>
             </div>
             
@@ -646,9 +724,9 @@ function FeedbacksPage() {
                         onClick={() => setForm((prev) => ({ ...prev, rating: star }))}
                       >
                         {star <= (hoveredStar || form.rating) ? (
-                          <FaStar className="star-picker-icon active" />
+                          <i className="ti ti-star-filled star-picker-icon active" style={{ color: "#f59e0b", fontSize: "1.85rem" }} />
                         ) : (
-                          <FaRegStar className="star-picker-icon" />
+                          <i className="ti ti-star star-picker-icon" style={{ color: "#cbd5e1", fontSize: "1.85rem" }} />
                         )}
                       </span>
                     ))}
@@ -696,6 +774,8 @@ function FeedbacksPage() {
           </div>
         </div>
       )}
+
+      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }

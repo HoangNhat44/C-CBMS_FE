@@ -1,5 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
-import { FaTimes } from "react-icons/fa";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/Sidebar";
+import { ownerMenuItems } from "../dashboard/Owner";
+import { staffMenuItems } from "../dashboard/Staff";
+import ChangePasswordModal from "../authentication/ChangePasswordModal";
 import categoryService from "../../services/category.service";
 import "./CategoriesPage.css";
 
@@ -8,6 +12,25 @@ const initialForm = {
   description: "",
   isActive: true,
 };
+
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
+
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
 
 function CategoriesPage() {
   const [categories, setCategories] = useState([]);
@@ -19,27 +42,22 @@ function CategoriesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  // Role simulation
-  const [userRole, setUserRole] = useState(() => {
-    const role = localStorage.getItem("simulated_role") || "owner";
-    if (!localStorage.getItem("token")) {
-      if (role === "owner") {
-        localStorage.setItem("token", "simulated_owner_token_jwt");
-      } else if (role === "staff") {
-        localStorage.setItem("token", "simulated_staff_token_jwt");
-      } else if (role === "customer") {
-        localStorage.setItem("token", "simulated_customer_token_jwt");
-      }
-    }
-    return role;
-  });
-
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("add"); // "add" or "edit"
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
+
+  // Layout states
+  const [user, setUser] = useState(null);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [cpModalOpen, setCpModalOpen] = useState(false);
+  const dropRef = useRef(null);
+  const navigate = useNavigate();
+
+  const isStaff = user?.role === "staff" || (!user?.role && localStorage.getItem("current_dashboard") === "staff");
+  const isOwner = user?.role === "owner" || (!user?.role && localStorage.getItem("current_dashboard") === "owner");
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -62,8 +80,28 @@ function CategoriesPage() {
   }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = decodeToken(token);
+      if (decoded && decoded.exp * 1000 > Date.now()) {
+        setUser(decoded);
+      } else {
+        localStorage.removeItem("token");
+      }
+    }
     fetchData();
   }, [fetchData]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Auto-hide messages
   useEffect(() => {
@@ -80,20 +118,36 @@ function CategoriesPage() {
     }
   }, [error]);
 
-  // Handle simulated role change
-  const handleRoleChange = (role) => {
-    setUserRole(role);
-    localStorage.setItem("simulated_role", role);
-    if (role === "owner") {
-      localStorage.setItem("token", "simulated_owner_token_jwt");
-    } else if (role === "staff") {
-      localStorage.setItem("token", "simulated_staff_token_jwt");
-    } else if (role === "customer") {
-      localStorage.setItem("token", "simulated_customer_token_jwt");
-    } else {
-      localStorage.removeItem("token");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setDropOpen(false);
+    navigate("/login", { replace: true });
+  };
+
+  const handleMenuChange = (key) => {
+    if (key === "category") return;
+    if (key === "product") {
+      navigate("/products");
+      return;
     }
-    fetchData();
+    if (key === "review") {
+      navigate("/feedbacks");
+      return;
+    }
+    if (key === "room") {
+      navigate("/room");
+      return;
+    }
+    if (key === "roomtype") {
+      navigate("/roomtype");
+      return;
+    }
+    if (key === "news") {
+      navigate("/news");
+      return;
+    }
+    navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
   };
 
   const handleInputChange = (e) => {
@@ -155,26 +209,6 @@ function CategoriesPage() {
     }
   };
 
-  /*
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) return;
-
-    try {
-      setError("");
-      setSuccess("");
-      await categoryService.deleteCategory(id);
-      setSuccess("Xóa danh mục thành công!");
-      fetchData();
-    } catch (err) {
-      setError(
-        err.response?.data?.error
-          ? `${err.response.data.message}: ${err.response.data.error}`
-          : err.response?.data?.message || "Không thể xóa thể loại"
-      );
-    }
-  };
-  */
-
   const handleToggleActive = async (category) => {
     try {
       setError("");
@@ -192,7 +226,8 @@ function CategoriesPage() {
     }
   };
 
-  const isStaffOrOwner = userRole === "owner" || userRole === "staff";
+  const initials = getInitials(user?.fullName || user?.email || "");
+  const isStaffOrOwner = isOwner || isStaff;
 
   // Filter categories client-side for search & active status
   const filteredCategories = categories.filter((c) => {
@@ -205,113 +240,171 @@ function CategoriesPage() {
   });
 
   return (
-    <div className="categories-container">
-      {/* Role Simulator */}
-      <div className="role-simulator">
-        <span className="role-simulator__label">Chế độ phân vai (test):</span>
-        <button
-          className={`role-simulator__btn ${userRole === "owner" ? "active" : ""}`}
-          onClick={() => handleRoleChange("owner")}
-        >
-          Owner
-        </button>
-        <button
-          className={`role-simulator__btn ${userRole === "staff" ? "active" : ""}`}
-          onClick={() => handleRoleChange("staff")}
-        >
-          Staff (Nhân viên)
-        </button>
+    <div className="dash">
+      <Sidebar
+        menuItems={isStaff ? staffMenuItems : ownerMenuItems}
+        active="category"
+        setActive={handleMenuChange}
+        handleLogout={handleLogout}
+        onLogoClick={() => navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard")}
+      />
 
+      <div className="main">
+        {/* Topbar */}
+        <div className="topbar">
+          <div className="topbar-left">
+            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
+            <span className="breadcrumb-active">Quản lý danh mục</span>
+          </div>
+          <div className="topbar-right">
+            <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
+              <div className="tb-avatar">{initials}</div>
+              <div>
+                <div className="tb-uname">{user?.fullName || user?.email}</div>
+                <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
+              </div>
+              <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
+
+              {dropOpen && (
+                <div className="categories-user-menu" style={{
+                  position: "absolute", top: "calc(100% + 10px)", right: 0,
+                  background: "#fff", border: "1px solid var(--border)",
+                  borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
+                  minWidth: 180, zIndex: 200, overflow: "hidden",
+                }}>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDropOpen(false);
+                      setCpModalOpen(true);
+                    }}
+                    style={{
+                      width: "100%", padding: "11px 16px",
+                      background: "none", border: "none",
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
+                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                    }}
+                  >
+                    <i className="ti ti-key" />
+                    Đổi mật khẩu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    style={{
+                      width: "100%", padding: "11px 16px",
+                      background: "none", border: "none",
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontSize: 13, fontWeight: 700, color: "#b42318",
+                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                      borderTop: "1px solid var(--border-light)"
+                    }}
+                  >
+                    <i className="ti ti-logout" />
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="content">
+          <header className="categories-header">
+            <div>
+              <h1 className="pg-title">Quản lý Danh Mục</h1>
+              <p className="pg-sub">
+                Quản lý các nhóm sản phẩm (đồ ăn, nước uống, combo...) phục vụ kinh doanh tại cụm rạp.
+              </p>
+            </div>
+            {isStaffOrOwner && (
+              <button className="btn-primary" onClick={openAddModal}>
+                <i className="ti ti-plus" /> Thêm danh mục
+              </button>
+            )}
+          </header>
+
+          {/* Alerts */}
+          {success && <div className="message-alert success">{success}</div>}
+          {error && <div className="message-alert error">{error}</div>}
+
+          {/* Filters */}
+          <section className="filter-bar">
+            <div className="filter-bar__search-container" style={{ position: "relative", flex: 1 }}>
+              <i className="ti ti-search" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+              <input
+                type="text"
+                placeholder="Tìm tên thể loại, mô tả..."
+                className="filter-bar__search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: "36px" }}
+              />
+            </div>
+
+            {isStaffOrOwner && (
+              <select
+                className="filter-bar__select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Tất cả Trạng thái</option>
+                <option value="active">Đang kích hoạt (Active)</option>
+                <option value="inactive">Tạm khóa (Inactive)</option>
+              </select>
+            )}
+          </section>
+
+          {/* Table grid */}
+          {loading ? (
+            <div className="state-display">Đang tải danh sách...</div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="state-display">Không tìm thấy danh mục nào phù hợp.</div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="categories-table">
+                <thead>
+                  <tr>
+                    <th>Tên danh mục</th>
+                    <th>Mô tả chi tiết</th>
+                    <th>Trạng thái</th>
+                    {isStaffOrOwner && <th className="text-right">Thao tác</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCategories.map((cat) => (
+                    <tr key={cat._id}>
+                      <td className="font-semibold">{cat.name}</td>
+                      <td className="text-muted">{cat.description || "—"}</td>
+                      <td>
+                        <span className={`status-badge ${cat.isActive ? "active" : "inactive"}`}>
+                          {cat.isActive ? "Đang kích hoạt" : "Tạm khóa"}
+                        </span>
+                      </td>
+                      {isStaffOrOwner && (
+                        <td className="text-right action-cell">
+                          <button 
+                            className={`action-btn toggle-status ${cat.isActive ? "active" : "inactive"}`} 
+                            onClick={() => handleToggleActive(cat)}
+                            title={cat.isActive ? "Tạm dừng hoạt động" : "Kích hoạt lại"}
+                          >
+                            {cat.isActive ? "Tạm dừng" : "Kích hoạt"}
+                          </button>
+                          <button className="action-btn edit" onClick={() => openEditModal(cat)}>
+                            Sửa
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-
-      <header className="categories-header">
-        <div>
-          <span className="categories-header__eyebrow">Thực Đơn</span>
-          <h1 className="categories-header__title">Danh Mục</h1>
-          <p className="categories-header__desc">
-            Quản lý các nhóm sản phẩm (đồ ăn, nước uống, combo...) phục vụ kinh doanh tại cụm rạp.
-          </p>
-        </div>
-        {isStaffOrOwner && (
-          <button className="categories-header__add-btn" onClick={openAddModal}>
-            + Thêm danh mục
-          </button>
-        )}
-      </header>
-
-      {/* Alerts */}
-      {success && <div className="message-alert success">{success}</div>}
-      {error && <div className="message-alert error">{error}</div>}
-
-      {/* Filters */}
-      <section className="filter-bar">
-        <input
-          type="text"
-          placeholder="Tìm tên thể loại, mô tả..."
-          className="filter-bar__search"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-
-        {isStaffOrOwner && (
-          <select
-            className="filter-bar__select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">Tất cả Trạng thái</option>
-            <option value="active">Đang kích hoạt (Active)</option>
-            <option value="inactive">Tạm khóa (Inactive)</option>
-          </select>
-        )}
-      </section>
-
-      {/* Table grid */}
-      {loading ? (
-        <div className="state-display">Đang tải danh sách...</div>
-      ) : filteredCategories.length === 0 ? (
-        <div className="state-display">Không tìm thấy danh mục nào phù hợp.</div>
-      ) : (
-        <div className="table-wrapper">
-          <table className="categories-table">
-            <thead>
-              <tr>
-                <th>Tên danh mục</th>
-                <th>Mô tả chi tiết</th>
-                <th>Trạng thái</th>
-                {isStaffOrOwner && <th className="text-right">Thao tác</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCategories.map((cat) => (
-                <tr key={cat._id}>
-                  <td className="font-semibold">{cat.name}</td>
-                  <td className="text-muted">{cat.description || "—"}</td>
-                  <td>
-                    <span className={`status-badge ${cat.isActive ? "active" : "inactive"}`}>
-                      {cat.isActive ? "Đang bán" : "Tạm dừng"}
-                    </span>
-                  </td>
-                  {isStaffOrOwner && (
-                    <td className="text-right action-cell">
-                      <button 
-                        className={`action-btn toggle-status ${cat.isActive ? "active" : "inactive"}`} 
-                        onClick={() => handleToggleActive(cat)}
-                        title={cat.isActive ? "Tạm dừng hoạt động" : "Kích hoạt lại"}
-                      >
-                        {cat.isActive ? "Tạm dừng" : "Kích hoạt"}
-                      </button>
-                      <button className="action-btn edit" onClick={() => openEditModal(cat)}>
-                        Sửa
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
@@ -320,7 +413,7 @@ function CategoriesPage() {
             <div className="modal-header">
               <h2>{modalType === "add" ? "Thêm thể loại mới" : "Chỉnh sửa thể loại"}</h2>
               <button className="modal-close" onClick={() => setIsModalOpen(false)}>
-                <FaTimes />
+                <i className="ti ti-x" />
               </button>
             </div>
 
@@ -374,6 +467,8 @@ function CategoriesPage() {
           </div>
         </div>
       )}
+
+      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }
