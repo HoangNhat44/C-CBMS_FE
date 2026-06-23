@@ -15,6 +15,7 @@ export const ownerMenuItems = [
     section: "Cơ sở vật chất",
     items: [
       { icon: "ti-building", label: "Quản lý cơ sở", key: "facility" },
+      { icon: "ti-layout-grid", label: "Quản lý loại phòng", key: "roomtype", child: true },
       { icon: "ti-door", label: "Quản lý phòng", key: "room", child: true },
       { icon: "ti-clock", label: "Quản lý slot", key: "slot" },
     ],
@@ -152,6 +153,10 @@ export default function OwnerDashboard() {
         setActive={(key) => {
           if (key === "room") {
             navigate("/room");
+            return;
+          }
+          if (key === "roomtype") {
+            navigate("/roomtype");
             return;
           }
           if (key === "news") {
@@ -383,3 +388,6 @@ export default function OwnerDashboard() {
     </div>
   );
 }
+
+
+

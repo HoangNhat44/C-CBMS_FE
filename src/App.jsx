@@ -15,6 +15,7 @@ import LandingPage from "./pages/dashboard/Landingpage";
 import ApplyPromotion from "./pages/promotion/ApplyPromotion";
 import RoomPage from "./pages/room/RoomPage";
 import NewsPage from "./pages/news/NewsPage";
+import RoomTypePage from "./pages/roomType/RoomTypePage";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
         <Route path="/apply-promotion" element={<ApplyPromotion />} />
         <Route path="/room" element={<RoomPage />} />
         <Route path="/news" element={<NewsPage />} />
+        <Route path="/roomtype" element={<RoomTypePage />} />
       </Routes>
     </BrowserRouter>
   );
