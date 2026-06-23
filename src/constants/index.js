@@ -4,6 +4,10 @@ export const API_ENDPOINTS = {
   AUTH: '/auth',
   BOOKINGS: '/bookings',
   ROLES: '/roles',
+  PRODUCTS: '/products',
+  CATEGORIES: '/categories',
+  BRANCHES: '/branches',
+  FEEDBACKS: '/feedbacks',
 };
 
 export const HTTP_STATUS = {
