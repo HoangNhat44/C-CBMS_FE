@@ -33,15 +33,22 @@ function ProductsPage() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState(() => {
+    const role = localStorage.getItem("simulated_role") || "owner";
+    return role === "staff" ? "6a3148f6c7aee5bfd334c2b5" : "";
+  });
   const [selectedCategory, setSelectedCategory] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   // Role simulation for testing (Huy B hasn't pushed login yet)
   const [userRole, setUserRole] = useState(() => {
     const role = localStorage.getItem("simulated_role") || "owner";
-    if ((role === "owner" || role === "staff") && !localStorage.getItem("token")) {
+    if (role === "owner" && !localStorage.getItem("token")) {
       localStorage.setItem("token", "simulated_owner_token_jwt");
+    } else if (role === "staff" && !localStorage.getItem("token")) {
+      localStorage.setItem("token", "simulated_staff_token_jwt");
+    } else if (role === "customer" && !localStorage.getItem("token")) {
+      localStorage.setItem("token", "simulated_customer_token_jwt");
     }
     return role;
   });
@@ -119,14 +126,23 @@ function ProductsPage() {
     setUserRole(role);
     localStorage.setItem("simulated_role", role);
     // Simulating token in localStorage to mimic Huy B's auth flow
-    if (role === "owner" || role === "staff") {
-      // Set a fake token to allow viewing inactive products in BE
-      // In a real app, this token is received from login response
+    if (role === "owner") {
       localStorage.setItem("token", "simulated_owner_token_jwt");
+      setSelectedBranch("");
+    } else if (role === "staff") {
+      localStorage.setItem("token", "simulated_staff_token_jwt");
+      setSelectedBranch("6a3148f6c7aee5bfd334c2b5");
+    } else if (role === "customer") {
+      localStorage.setItem("token", "simulated_customer_token_jwt");
+      setSelectedBranch("");
     } else {
       localStorage.removeItem("token");
+      setSelectedBranch("");
     }
-    fetchData();
+    // Briefly await state change before calling fetchData
+    setTimeout(() => {
+      fetchData();
+    }, 50);
   };
 
   const handleInputChange = (e) => {
@@ -177,7 +193,8 @@ function ProductsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.price || form.availableBranches.length === 0) {
+    const finalBranches = userRole === "staff" ? ["6a3148f6c7aee5bfd334c2b5"] : form.availableBranches;
+    if (!form.name || !form.price || finalBranches.length === 0) {
       setError("Vui lòng nhập đầy đủ Tên, Giá và chọn ít nhất 1 Chi nhánh");
       return;
     }
@@ -190,6 +207,7 @@ function ProductsPage() {
       const payload = {
         ...form,
         price: Number(form.price),
+        availableBranches: finalBranches,
       };
 
       if (modalType === "add") {
@@ -210,6 +228,7 @@ function ProductsPage() {
     }
   };
 
+  /*
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) return;
 
@@ -223,6 +242,7 @@ function ProductsPage() {
       setError(err.response?.data?.error ? `${err.response.data.message}: ${err.response.data.error}` : (err.response?.data?.message || "Không thể xóa sản phẩm"));
     }
   };
+  */
 
   const handleToggleActive = async (product) => {
     try {
@@ -306,18 +326,25 @@ function ProductsPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        <select
-          className="filter-bar__select"
-          value={selectedBranch}
-          onChange={(e) => setSelectedBranch(e.target.value)}
-        >
-          <option value="">Tất cả Chi nhánh</option>
-          {branches.map((b) => (
-            <option key={b._id} value={b._id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        {userRole === "staff" ? (
+          <div className="filter-bar__static-branch">
+            <FaMapMarkerAlt style={{ marginRight: "6px", color: "#64748b" }} />
+            <span>Chi nhánh: Cinema Cafe Nguyen Trai</span>
+          </div>
+        ) : (
+          <select
+            className="filter-bar__select"
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+          >
+            <option value="">Tất cả Chi nhánh</option>
+            {branches.map((b) => (
+              <option key={b._id} value={b._id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           className="filter-bar__select"
@@ -377,23 +404,25 @@ function ProductsPage() {
                   
                   <p className="product-card__desc">{product.description || "Chưa có mô tả chi tiết."}</p>
                   
-                  <div className="product-card__branches">
-                    <div className="product-card__branches-header">
-                      <FaMapMarkerAlt style={{ marginRight: "4px", color: "#0d9488" }} />
-                      <span>Bán tại:</span>
+                  {userRole !== "staff" && (
+                    <div className="product-card__branches">
+                      <div className="product-card__branches-header">
+                        <FaMapMarkerAlt style={{ marginRight: "4px", color: "#0d9488" }} />
+                        <span>Bán tại:</span>
+                      </div>
+                      <div className="product-card__branch-badges">
+                        {product.availableBranches && product.availableBranches.length > 0 ? (
+                          product.availableBranches.map((b) => (
+                            <span key={b._id || b} className="branch-badge">
+                              {b.name || "Chi nhánh"}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="branch-badge empty">Chưa có chi nhánh</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="product-card__branch-badges">
-                      {product.availableBranches && product.availableBranches.length > 0 ? (
-                        product.availableBranches.map((b) => (
-                          <span key={b._id || b} className="branch-badge">
-                            {b.name || "Chi nhánh"}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="branch-badge empty">Chưa có chi nhánh</span>
-                      )}
-                    </div>
-                  </div>
+                  )}
 
                   <div className="product-card__price-row">
                     <span className="product-card__price-label">Giá bán:</span>
@@ -411,9 +440,6 @@ function ProductsPage() {
                       </button>
                       <button className="btn-edit" onClick={(e) => { e.stopPropagation(); openEditModal(product); }}>
                         Sửa
-                      </button>
-                      <button className="btn-delete" onClick={(e) => { e.stopPropagation(); handleDelete(product._id); }}>
-                        Xóa
                       </button>
                     </div>
                   )}
@@ -498,26 +524,28 @@ function ProductsPage() {
                 />
               </label>
 
-              <div className="form-label">
-                Chi nhánh khả dụng *
-                <p className="field-help">Chọn ít nhất một chi nhánh mà sản phẩm này được bán:</p>
-                <div className="branches-checkbox-group">
-                  {branches.length === 0 ? (
-                    <p className="no-branches-warning">Đang tải danh sách chi nhánh hoặc chưa có chi nhánh nào...</p>
-                  ) : (
-                    branches.map((b) => (
-                      <label key={b._id} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={form.availableBranches.includes(b._id)}
-                          onChange={(e) => handleBranchCheckboxChange(b._id, e.target.checked)}
-                        />
-                        {b.name}
-                      </label>
-                    ))
-                  )}
+              {userRole !== "staff" && (
+                <div className="form-label">
+                  Chi nhánh khả dụng *
+                  <p className="field-help">Chọn ít nhất một chi nhánh mà sản phẩm này được bán:</p>
+                  <div className="branches-checkbox-group">
+                    {branches.length === 0 ? (
+                      <p className="no-branches-warning">Đang tải danh sách chi nhánh hoặc chưa có chi nhánh nào...</p>
+                    ) : (
+                      branches.map((b) => (
+                        <label key={b._id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={form.availableBranches.includes(b._id)}
+                            onChange={(e) => handleBranchCheckboxChange(b._id, e.target.checked)}
+                          />
+                          {b.name}
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <label className="checkbox-item active-toggle">
                 <input
@@ -573,14 +601,16 @@ function ProductsPage() {
                   <strong>Mô tả:</strong>
                   <p className="detail-desc">{selectedDetailProduct.description || "Chưa có mô tả chi tiết cho sản phẩm này."}</p>
                 </div>
-                <div className="detail-item">
-                  <strong>Bán tại chi nhánh:</strong>
-                  <div className="detail-branches">
-                    {selectedDetailProduct.availableBranches && selectedDetailProduct.availableBranches.length > 0
-                      ? selectedDetailProduct.availableBranches.map(b => b.name || "Chi nhánh").join(", ")
-                      : "Chưa có chi nhánh"}
+                {userRole !== "staff" && (
+                  <div className="detail-item">
+                    <strong>Bán tại chi nhánh:</strong>
+                    <div className="detail-branches">
+                      {selectedDetailProduct.availableBranches && selectedDetailProduct.availableBranches.length > 0
+                        ? selectedDetailProduct.availableBranches.map(b => b.name || "Chi nhánh").join(", ")
+                        : "Chưa có chi nhánh"}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">

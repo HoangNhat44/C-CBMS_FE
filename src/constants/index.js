@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   PRODUCTS: '/products',
   CATEGORIES: '/categories',
   BRANCHES: '/branches',
+  FEEDBACKS: '/feedbacks',
 };
 
 export const HTTP_STATUS = {

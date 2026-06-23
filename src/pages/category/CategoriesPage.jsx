@@ -22,8 +22,14 @@ function CategoriesPage() {
   // Role simulation
   const [userRole, setUserRole] = useState(() => {
     const role = localStorage.getItem("simulated_role") || "owner";
-    if ((role === "owner" || role === "staff") && !localStorage.getItem("token")) {
-      localStorage.setItem("token", "simulated_owner_token_jwt");
+    if (!localStorage.getItem("token")) {
+      if (role === "owner") {
+        localStorage.setItem("token", "simulated_owner_token_jwt");
+      } else if (role === "staff") {
+        localStorage.setItem("token", "simulated_staff_token_jwt");
+      } else if (role === "customer") {
+        localStorage.setItem("token", "simulated_customer_token_jwt");
+      }
     }
     return role;
   });
@@ -78,8 +84,12 @@ function CategoriesPage() {
   const handleRoleChange = (role) => {
     setUserRole(role);
     localStorage.setItem("simulated_role", role);
-    if (role === "owner" || role === "staff") {
+    if (role === "owner") {
       localStorage.setItem("token", "simulated_owner_token_jwt");
+    } else if (role === "staff") {
+      localStorage.setItem("token", "simulated_staff_token_jwt");
+    } else if (role === "customer") {
+      localStorage.setItem("token", "simulated_customer_token_jwt");
     } else {
       localStorage.removeItem("token");
     }
@@ -145,6 +155,7 @@ function CategoriesPage() {
     }
   };
 
+  /*
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) return;
 
@@ -162,6 +173,7 @@ function CategoriesPage() {
       );
     }
   };
+  */
 
   const handleToggleActive = async (category) => {
     try {
@@ -291,9 +303,6 @@ function CategoriesPage() {
                       </button>
                       <button className="action-btn edit" onClick={() => openEditModal(cat)}>
                         Sửa
-                      </button>
-                      <button className="action-btn delete" onClick={() => handleDelete(cat._id)}>
-                        Xóa
                       </button>
                     </td>
                   )}
