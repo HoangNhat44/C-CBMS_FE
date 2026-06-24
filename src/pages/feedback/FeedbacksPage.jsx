@@ -71,7 +71,7 @@ function FeedbacksPage() {
   const openAddModal = () => {
     const reviewedIds = feedbacks.map((f) => f.bookingId?._id || f.bookingId);
     const unreviewed = mockBookings.filter((b) => !reviewedIds.includes(b._id));
-    
+
     if (unreviewed.length > 0) {
       setForm({
         bookingId: unreviewed[0]._id,
@@ -108,15 +108,15 @@ function FeedbacksPage() {
         ...b,
         bookingDate: b.date,
         finalTotal: b.amount,
-        branchId: { 
-          name: b.branchId === "6a3148f6c7aee5bfd334c2b6" ? "Cinema Cafe Le Loi" : "Chi nhánh khác" 
+        branchId: {
+          name: b.branchId === "6a3148f6c7aee5bfd334c2b6" ? "Cinema Cafe Le Loi" : "Chi nhánh khác"
         },
-        roomId: { 
-          roomName: b.slotId === "6a3148f8c7aee5bfd334c2c7" ? "Slot 5 (16:00 - 18:00)" : "Slot 6 (18:00 - 20:00)" 
+        roomId: {
+          roomName: b.slotId === "6a3148f8c7aee5bfd334c2c7" ? "Slot 5 (16:00 - 18:00)" : "Slot 6 (18:00 - 20:00)"
         }
       };
     }
-    
+
     const f = feedbacks.find((x) => (x.bookingId?._id || x.bookingId) === bookingId);
     if (f && f.bookingId) {
       return {
@@ -146,16 +146,16 @@ function FeedbacksPage() {
       setError("");
 
       const params = {};
-      
+
       const tokenUser = decodeToken(localStorage.getItem("token"));
       const isStaffUser = tokenUser?.role === "staff";
-      
+
       if (isStaffUser && tokenUser?.branchId) {
         params.branchId = tokenUser.branchId;
       } else if (branchFilter) {
         params.branchId = branchFilter;
       }
-      
+
       if (ratingFilter) params.rating = ratingFilter;
       if (searchTerm) params.search = searchTerm;
       if (sortBy) params.sortBy = sortBy;
@@ -233,6 +233,14 @@ function FeedbacksPage() {
     }
     if (key === "product") {
       navigate("/products");
+      return;
+    }
+    if (key === "bookinghistory") {
+      navigate("/bookinghistory");
+      return;
+    }
+    if (key === "walkin") {
+      navigate("/walkin");
       return;
     }
     if (key === "room") {
@@ -328,7 +336,7 @@ function FeedbacksPage() {
 
   // Calculate statistics based on current feedback entries
   const totalReviews = feedbacks.length;
-  const averageRating = totalReviews > 0 
+  const averageRating = totalReviews > 0
     ? (feedbacks.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1)
     : "0.0";
 
@@ -487,8 +495,8 @@ function FeedbacksPage() {
                         {star} <i className="ti ti-star-filled star-mini" style={{ color: "#fbbf24" }} />
                       </span>
                       <div className="dist-progress-bg">
-                        <div 
-                          className="dist-progress-fill" 
+                        <div
+                          className="dist-progress-fill"
                           style={{ width: `${pct}%` }}
                         ></div>
                       </div>
@@ -508,8 +516,8 @@ function FeedbacksPage() {
                 <label className="filter-label">Tìm kiếm từ khóa</label>
                 <div className="search-input-wrapper">
                   <i className="ti ti-search search-icon" style={{ left: "12px", position: "absolute", color: "#94a3b8" }} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="Tìm kiếm nội dung đánh giá..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -528,7 +536,7 @@ function FeedbacksPage() {
                     <span>{staffBranchName}</span>
                   </div>
                 ) : (
-                  <select 
+                  <select
                     value={branchFilter}
                     onChange={(e) => setBranchFilter(e.target.value)}
                     className="filter-input"
@@ -544,7 +552,7 @@ function FeedbacksPage() {
               {/* Rating Filter */}
               <div className="filter-group">
                 <label className="filter-label">Số sao</label>
-                <select 
+                <select
                   value={ratingFilter}
                   onChange={(e) => setRatingFilter(e.target.value)}
                   className="filter-input"
@@ -561,7 +569,7 @@ function FeedbacksPage() {
               {/* Sorting Option */}
               <div className="filter-group">
                 <label className="filter-label">Sắp xếp</label>
-                <select 
+                <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="filter-input"
@@ -599,8 +607,8 @@ function FeedbacksPage() {
                 });
 
                 return (
-                  <div 
-                    key={item._id} 
+                  <div
+                    key={item._id}
                     className={`feedback-card ${!item.isVisible ? "hidden-feedback" : ""}`}
                   >
                     {/* Card Header: User Avatar & Name */}
@@ -647,23 +655,23 @@ function FeedbacksPage() {
                     {userRole === "customer" && (
                       (item.customerId?._id || item.customerId) === user?.userId
                     ) && (
-                      <div className="feedback-card-actions">
-                        <button 
-                          className="btn-action btn-toggle-visible show"
-                          onClick={() => openEditModal(item)}
-                          title="Chỉnh sửa đánh giá"
-                        >
-                          Sửa đánh giá
-                        </button>
-                        <button 
-                          className="btn-action btn-delete-feedback"
-                          onClick={() => handleDeleteFeedback(item._id)}
-                          title="Xóa đánh giá"
-                        >
-                          <i className="ti ti-trash" /> Xóa
-                        </button>
-                      </div>
-                    )}
+                        <div className="feedback-card-actions">
+                          <button
+                            className="btn-action btn-toggle-visible show"
+                            onClick={() => openEditModal(item)}
+                            title="Chỉnh sửa đánh giá"
+                          >
+                            Sửa đánh giá
+                          </button>
+                          <button
+                            className="btn-action btn-delete-feedback"
+                            onClick={() => handleDeleteFeedback(item._id)}
+                            title="Xóa đánh giá"
+                          >
+                            <i className="ti ti-trash" /> Xóa
+                          </button>
+                        </div>
+                      )}
                   </div>
                 );
               })}
@@ -682,7 +690,7 @@ function FeedbacksPage() {
                 <i className="ti ti-x" />
               </button>
             </div>
-            
+
             <form onSubmit={handleFormSubmit}>
               <div className="modal-body">
                 {/* Booking Info Box (Read-only, completely hides Booking ID) */}
@@ -716,7 +724,7 @@ function FeedbacksPage() {
                   <label className="form-label required">Mức độ hài lòng (Số sao)</label>
                   <div className="star-picker">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <span 
+                      <span
                         key={star}
                         className="star-picker-wrapper"
                         onMouseEnter={() => setHoveredStar(star)}
@@ -743,7 +751,7 @@ function FeedbacksPage() {
                 {/* Comment Textarea */}
                 <div className="form-group">
                   <label className="form-label">Ý kiến đóng góp thêm (Bình luận)</label>
-                  <textarea 
+                  <textarea
                     name="comment"
                     value={form.comment}
                     onChange={handleFormChange}
@@ -755,15 +763,15 @@ function FeedbacksPage() {
               </div>
 
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn-cancel" 
+                <button
+                  type="button"
+                  className="btn-cancel"
                   onClick={() => setIsModalOpen(false)}
                 >
                   Hủy bỏ
                 </button>
-                 <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-submit"
                   disabled={submitting || (!isEditing && !form.bookingId)}
                 >

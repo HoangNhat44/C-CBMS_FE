@@ -183,7 +183,7 @@ function BookingPage() {
         setLayoutData(layoutRes.data?.data?.layout || []);
 
         // 2. Fetch products
-        const productsRes = await productAPI.getAllProducts(selectedBranchId);
+        const productsRes = await productAPI.getAllProducts({ branchId: selectedBranchId });
         setProducts(productsRes.data?.data || []);
         setSelectedProducts({}); // Reset selected products
 
@@ -854,42 +854,59 @@ function BookingPage() {
                 {/* Available promotions list */}
                 <div className="promo-list-section">
                   <h5>Ưu đãi đang có:</h5>
-                  {promotions.length === 0 ? (
-                    <p style={{ fontSize: '12px', color: '#6c757d', margin: 0, textAlign: 'left' }}>Không có chương trình ưu đãi nào tại chi nhánh này.</p>
-                  ) : (
-                    <div className="promo-grid">
-                      {promotions.map((promo) => {
-                        const isSelected = selectedPromotions.includes(promo._id);
-                        return (
-                          <div
-                            key={promo._id}
-                            className={`promo-card-item ${isSelected ? 'promo-card-item--selected' : ''}`}
-                            onClick={() => handleTogglePromotion(promo._id)}
-                          >
-                            <div className="promo-card-item__info">
-                              <span className="promo-code">
-                                🏷️ {promo.code}
-                              </span>
-                              <span className="promo-desc">
-                                {promo.description || `Giảm ${promo.discountType === 'percent' ? `${promo.discountValue}%` : formatCurrency(promo.discountValue)}`}
-                              </span>
-                              {promo.maxUsage !== null && (
-                                <span className="promo-usage" style={{ color: '#9ca3af', fontSize: '11px' }}>
-                                  Đã dùng: {promo.usedCount}/{promo.maxUsage}
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              className={`promo-select-btn ${isSelected ? 'promo-select-btn--remove' : ''}`}
+                  {(() => {
+                    const visiblePromos = promotions.filter((promo) => {
+                      const isSelected = selectedPromotions.includes(promo._id);
+                      
+                      const now = new Date();
+                      const hasStarted = !promo.startDate || now >= new Date(promo.startDate);
+                      const hasNotExpired = !promo.endDate || now <= new Date(promo.endDate);
+                      const hasUsageLeft = promo.maxUsage === null || promo.maxUsage === undefined || promo.usedCount < promo.maxUsage;
+                      const isPromoValid = promo.isActive && hasStarted && hasNotExpired && hasUsageLeft;
+
+                      const isVisibleVoucher = !promo.code && isPromoValid;
+                      return isSelected || isVisibleVoucher;
+                    });
+
+                    if (visiblePromos.length === 0) {
+                      return <p style={{ fontSize: '12px', color: '#6c757d', margin: 0, textAlign: 'left' }}>Không có chương trình ưu đãi nào tại chi nhánh này.</p>;
+                    }
+
+                    return (
+                      <div className="promo-grid">
+                        {visiblePromos.map((promo) => {
+                          const isSelected = selectedPromotions.includes(promo._id);
+                          return (
+                            <div
+                              key={promo._id}
+                              className={`promo-card-item ${isSelected ? 'promo-card-item--selected' : ''}`}
+                              onClick={() => handleTogglePromotion(promo._id)}
                             >
-                              {isSelected ? 'Bỏ chọn' : 'Chọn dùng'}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                              <div className="promo-card-item__info">
+                                <span className="promo-code">
+                                  🏷️ {promo.code || "Ưu đãi tự động"}
+                                </span>
+                                <span className="promo-desc">
+                                  {promo.description || `Giảm ${promo.discountType === 'percent' ? `${promo.discountValue}%` : formatCurrency(promo.discountValue)}`}
+                                </span>
+                                {promo.maxUsage !== null && (
+                                  <span className="promo-usage" style={{ color: '#9ca3af', fontSize: '11px' }}>
+                                    Đã dùng: {promo.usedCount}/{promo.maxUsage}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                className={`promo-select-btn ${isSelected ? 'promo-select-btn--remove' : ''}`}
+                              >
+                                {isSelected ? 'Bỏ chọn' : 'Chọn dùng'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

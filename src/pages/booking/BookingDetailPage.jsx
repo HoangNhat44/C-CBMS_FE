@@ -1,10 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import bookingAPI from "../../services/booking.service";
 import paymentAPI from "../../services/payment.service";
+import refundAPI from "../../services/refund.service";
+import feedbackService from "../../services/feedback.service";
+import authAPI from "../../services/auth.service";
 import PaymentQRModal from "../../components/PaymentQRModal";
 import Header from "../../components/Header";
+import Sidebar from "../../components/Sidebar";
+import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import { ownerMenuItems } from "../dashboard/Owner";
+import { staffMenuItems } from "../dashboard/Staff";
+import "../dashboard/Dashboard.css";
 import "./BookingDetailPage.css";
+
+function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+}
+
+function getInitials(name = "") {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
 
 function BookingDetailPage() {
   const { id: bookingId } = useParams();
@@ -13,10 +40,93 @@ function BookingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = decodeToken(token);
+      if (decoded && decoded.exp * 1000 > Date.now()) {
+        return {
+          id: decoded.userId,
+          email: decoded.email,
+          role: decoded.role,
+        };
+      }
+    }
+    return null;
+  });
   
   // QR Modal States
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [qrData, setQrData] = useState({ qrCode: "", checkoutUrl: "", amount: 0 });
+
+  // Refund States
+  const [refund, setRefund] = useState(null);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [ownerNotes, setOwnerNotes] = useState("");
+  const [proofImageBase64, setProofImageBase64] = useState("");
+
+  // Feedback States
+  const [feedback, setFeedback] = useState(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState("");
+
+  // Dashboard UI States
+  const [dropOpen, setDropOpen] = useState(false);
+  const [cpModalOpen, setCpModalOpen] = useState(false);
+  const dropRef = useRef(null);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setCurrentUser(null);
+    setDropOpen(false);
+    navigate("/login", { replace: true });
+  };
+
+  // Load User Info
+  useEffect(() => {
+    const checkUser = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const decoded = decodeToken(token);
+        if (decoded && decoded.exp * 1000 > Date.now()) {
+          setCurrentUser({
+            id: decoded.userId,
+            email: decoded.email,
+            role: decoded.role,
+          });
+        }
+        
+        try {
+          const verifyRes = await authAPI.verifyToken();
+          if (verifyRes.data?.success) {
+            setCurrentUser(verifyRes.data.data.user);
+          } else {
+            localStorage.removeItem("token");
+            setCurrentUser(null);
+          }
+        } catch (verifyErr) {
+          console.error("Token verification failed:", verifyErr);
+          localStorage.removeItem("token");
+          setCurrentUser(null);
+        }
+      }
+    };
+    checkUser();
+  }, []);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -27,7 +137,30 @@ function BookingDetailPage() {
         setError("");
         const res = await bookingAPI.getBookingById(bookingId);
         if (res.data?.success) {
-          setBooking(res.data.data);
+          const bData = res.data.data;
+          setBooking(bData);
+          
+          if (bData.status === "request_refund" || bData.status === "refunded") {
+            try {
+              const refundRes = await refundAPI.getRefundByBookingId(bookingId);
+              if (refundRes.data?.success) {
+                setRefund(refundRes.data.data);
+              }
+            } catch (rErr) {
+              console.error("Failed to load refund details", rErr);
+            }
+          }
+
+          if (bData.status === "completed") {
+            try {
+              const fbRes = await feedbackService.getAllFeedbacks({ bookingId });
+              if (fbRes.data?.success && fbRes.data.data && fbRes.data.data.length > 0) {
+                setFeedback(fbRes.data.data[0]);
+              }
+            } catch (fbErr) {
+              console.error("Failed to load feedback details", fbErr);
+            }
+          }
         } else {
           setError("Không tìm thấy thông tin chi tiết đặt phòng.");
         }
@@ -82,22 +215,194 @@ function BookingDetailPage() {
     }
   };
 
-  const handleCancelBooking = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn đặt phòng này?")) return;
+  const handleUpdateStatus = async (newStatus, confirmMsg, successMsg) => {
+    if (!window.confirm(confirmMsg)) return;
 
     try {
       setSubmitting(true);
-      const res = await bookingAPI.updateBookingStatus(bookingId, { status: "cancelled" });
+      const res = await bookingAPI.updateBookingStatus(bookingId, { status: newStatus });
       if (res.data?.success) {
-        alert("Đã hủy đặt phòng thành công!");
+        alert(successMsg || "Cập nhật trạng thái đặt phòng thành công!");
         setBooking(res.data.data);
       }
     } catch (err) {
       console.error(err);
-      alert("Hủy đặt phòng thất bại: " + (err.response?.data?.message || err.message));
+      alert("Cập nhật thất bại: " + (err.response?.data?.message || err.message));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCancelBooking = () => {
+    handleUpdateStatus(
+      "cancelled", 
+      "Bạn có chắc chắn muốn hủy đơn đặt phòng này?", 
+      "Đã hủy đặt phòng thành công!"
+    );
+  };
+
+  const handleRequestRefund = () => {
+    if (!booking) return;
+
+    // Compare date to determine same-day
+    const bookingDateObj = new Date(booking.bookingDate);
+    bookingDateObj.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const isSameDay = bookingDateObj.getTime() <= today.getTime();
+
+    if (isSameDay) {
+      if (window.confirm("Đơn đặt phòng này diễn ra trong ngày hôm nay. Theo quy định, hủy đơn đặt phòng trong ngày sẽ KHÔNG ĐƯỢC HOÀN LẠI TIỀN. Bạn có chắc chắn muốn hủy đơn và chấp nhận không hoàn tiền?")) {
+        submitSameDayCancellation();
+      }
+    } else {
+      setShowRefundModal(true);
+    }
+  };
+
+  const submitSameDayCancellation = async () => {
+    try {
+      setSubmitting(true);
+      const res = await refundAPI.createRefundRequest({
+        bookingId,
+        reason: "Hủy đặt phòng trong ngày (Không hoàn tiền)"
+      });
+      if (res.data?.success) {
+        alert("Đã hủy đơn đặt phòng thành công (Không hoàn tiền).");
+        // Reload details
+        const updatedBooking = await bookingAPI.getBookingById(bookingId);
+        if (updatedBooking.data?.success) {
+          setBooking(updatedBooking.data.data);
+          const rRes = await refundAPI.getRefundByBookingId(bookingId);
+          if (rRes.data?.success) setRefund(rRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Hủy thất bại: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCustomerRefundSubmit = async (e) => {
+    e.preventDefault();
+    if (!refundReason.trim()) {
+      alert("Vui lòng nhập lý do hủy và thông tin nhận hoàn tiền.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await refundAPI.createRefundRequest({
+        bookingId,
+        reason: refundReason
+      });
+      if (res.data?.success) {
+        alert("Gửi yêu cầu hoàn tiền thành công!");
+        setShowRefundModal(false);
+        // Reload details
+        const updatedBooking = await bookingAPI.getBookingById(bookingId);
+        if (updatedBooking.data?.success) {
+          setBooking(updatedBooking.data.data);
+          const rRes = await refundAPI.getRefundByBookingId(bookingId);
+          if (rRes.data?.success) setRefund(rRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gửi yêu cầu thất bại: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!feedbackRating) {
+      alert("Vui lòng chọn số sao đánh giá.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await feedbackService.createFeedback({
+        bookingId,
+        rating: feedbackRating,
+        comment: feedbackComment
+      });
+      if (res.data?.success) {
+        alert("Gửi đánh giá thành công! Cảm ơn bạn.");
+        setFeedback(res.data.data);
+        setShowFeedbackModal(false);
+        setFeedbackComment("");
+      } else {
+        alert(res.data?.message || "Lỗi khi gửi đánh giá.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Không thể gửi đánh giá.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOwnerApproveSubmit = async (e) => {
+    e.preventDefault();
+    if (!proofImageBase64) {
+      alert("Vui lòng tải lên ảnh minh chứng đã chuyển khoản hoàn tiền.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await refundAPI.approveRefund(refund._id, {
+        proofImage: proofImageBase64,
+        adminNotes: ownerNotes
+      });
+      if (res.data?.success) {
+        alert("Xác nhận đã hoàn tiền thành công!");
+        setShowApproveModal(false);
+        // Reload details
+        const updatedBooking = await bookingAPI.getBookingById(bookingId);
+        if (updatedBooking.data?.success) {
+          setBooking(updatedBooking.data.data);
+          const rRes = await refundAPI.getRefundByBookingId(bookingId);
+          if (rRes.data?.success) setRefund(rRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Phê duyệt thất bại: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File ảnh quá lớn (chỉ cho phép tối đa 5MB).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProofImageBase64(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCompleteBooking = () => {
+    handleUpdateStatus(
+      "completed", 
+      "Xác nhận hoàn thành đơn đặt phòng này cho khách hàng?", 
+      "Đã xác nhận hoàn thành đơn đặt phòng thành công!"
+    );
   };
 
   const getStatusLabel = (status) => {
@@ -110,6 +415,8 @@ function BookingDetailPage() {
         return { text: "HOÀN THÀNH", className: "status-tag--completed" };
       case "cancelled":
         return { text: "ĐÃ HỦY", className: "status-tag--cancelled" };
+      case "request_refund":
+        return { text: "YÊU CẦU HOÀN TIỀN", className: "status-tag--pending" };
       case "refunded":
         return { text: "ĐÃ HOÀN TIỀN", className: "status-tag--refunded" };
       default:
@@ -130,36 +437,180 @@ function BookingDetailPage() {
     }
   };
 
-  if (loading) {
+  const getRoleFromToken = () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decoded = decodeToken(token);
+      return (decoded?.role || "").toLowerCase();
+    }
+    return "";
+  };
+
+  const roleName = (currentUser?.role?.name || currentUser?.role || getRoleFromToken() || "").toLowerCase();
+  const isDashboardRole = roleName === "owner" || roleName === "staff";
+  const initials = getInitials(currentUser?.fullName || currentUser?.email || "");
+  const menuItems = roleName === "staff" ? staffMenuItems : ownerMenuItems;
+
+  const renderDashboardWrapper = (child) => {
     return (
+      <div className={`dash ${roleName === "staff" ? "dash--staff" : ""}`}>
+        <Sidebar
+          menuItems={menuItems}
+          active="bookinghistory"
+          setActive={(key) => {
+            if (roleName === "staff") {
+              if (key === "category") navigate("/categories");
+              else if (key === "product") navigate("/products");
+              else if (key === "review") navigate("/feedbacks");
+              else if (key === "bookinghistory") navigate("/bookinghistory");
+              else if (key === "walkin") navigate("/walkin");
+              else navigate("/staff-dashboard");
+            } else {
+              if (key === "room") navigate("/room");
+              else if (key === "roomtype") navigate("/roomtype");
+              else if (key === "news") navigate("/news");
+              else if (key === "category") navigate("/categories");
+              else if (key === "product") navigate("/products");
+              else if (key === "review") navigate("/feedbacks");
+              else if (key === "bookinghistory") navigate("/bookinghistory");
+              else navigate("/owner-dashboard");
+            }
+          }}
+          handleLogout={handleLogout}
+          onLogoClick={() => navigate(roleName === "staff" ? "/staff-dashboard" : "/owner-dashboard")}
+        />
+
+        <div className="main">
+          {/* Topbar */}
+          <div className="topbar">
+            <div className="topbar-left">
+              <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
+              <span className="breadcrumb">Lịch sử đặt phòng&nbsp;/&nbsp;</span>
+              <span className="breadcrumb-active">Chi tiết đơn đặt</span>
+            </div>
+            <div className="topbar-right">
+              {currentUser && (
+                <div
+                  className="tb-user"
+                  ref={dropRef}
+                  style={{ position: "relative" }}
+                  onClick={() => setDropOpen((v) => !v)}
+                >
+                  <div className="tb-avatar">{initials}</div>
+                  <div>
+                    <div className="tb-uname">{currentUser.fullName || currentUser.email}</div>
+                    <div className="tb-role" style={{ textTransform: "capitalize" }}>{roleName}</div>
+                  </div>
+                  <i
+                    className="ti ti-chevron-down"
+                    style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }}
+                  />
+
+                  {dropOpen && (
+                    <div style={{
+                      position: "absolute", top: "calc(100% + 10px)", right: 0,
+                      background: "#fff", border: "1px solid var(--border)",
+                      borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
+                      minWidth: 180, zIndex: 200, overflow: "hidden",
+                    }}>
+                      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-dark)" }}>
+                          {currentUser.fullName || currentUser.email}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, textTransform: "capitalize" }}>
+                          {roleName}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setDropOpen(false);
+                          setCpModalOpen(true);
+                        }}
+                        style={{
+                          width: "100%", padding: "11px 16px",
+                          background: "none", border: "none",
+                          display: "flex", alignItems: "center", gap: 8,
+                          fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
+                          cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                      >
+                        <i className="ti ti-key" style={{ fontSize: 16 }} />
+                        Đổi mật khẩu
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        style={{
+                          width: "100%", padding: "11px 16px",
+                          background: "none", border: "none",
+                          display: "flex", alignItems: "center", gap: 8,
+                          fontSize: 13, fontWeight: 700, color: "#b42318",
+                          cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "#fff1f0"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                      >
+                        <i className="ti ti-logout" style={{ fontSize: 16 }} />
+                        Đăng xuất
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="content" style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
+            {child}
+          </div>
+        </div>
+
+        <ChangePasswordModal 
+          isOpen={cpModalOpen} 
+          onClose={() => setCpModalOpen(false)} 
+        />
+      </div>
+    );
+  };
+
+  if (loading) {
+    const loadingView = (
+      <main className="booking-page detail-page" style={isDashboardRole ? { padding: 0, minHeight: "auto", background: "none" } : {}}>
+        <section className="booking-content detail-content" style={isDashboardRole ? { maxWidth: "100%", padding: 0, boxShadow: "none", background: "none" } : {}}>
+          <div className="booking-state booking-state--loading">
+            <div className="spinner"></div>
+            <p>Đang tải chi tiết đặt phòng...</p>
+          </div>
+        </section>
+      </main>
+    );
+    return isDashboardRole ? renderDashboardWrapper(loadingView) : (
       <>
         <Header />
-        <main className="booking-page detail-page">
-          <section className="booking-content detail-content">
-            <div className="booking-state booking-state--loading">
-              <div className="spinner"></div>
-              <p>Đang tải chi tiết đặt phòng...</p>
-            </div>
-          </section>
-        </main>
+        {loadingView}
       </>
     );
   }
 
   if (error || !booking) {
-    return (
+    const errorView = (
+      <main className="booking-page detail-page" style={isDashboardRole ? { padding: 0, minHeight: "auto", background: "none" } : {}}>
+        <section className="booking-content detail-content" style={isDashboardRole ? { maxWidth: "100%", padding: 0, boxShadow: "none", background: "none" } : {}}>
+          <div className="booking-state booking-state--error">
+            <p>{error || "Đơn hàng không tồn tại."}</p>
+            <button className="back-btn" onClick={() => navigate("/bookinghistory")}>
+              ← Quay lại lịch sử đặt phòng
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+    return isDashboardRole ? renderDashboardWrapper(errorView) : (
       <>
         <Header />
-        <main className="booking-page detail-page">
-          <section className="booking-content detail-content">
-            <div className="booking-state booking-state--error">
-              <p>{error || "Đơn hàng không tồn tại."}</p>
-              <button className="back-btn" onClick={() => navigate("/bookinghistory")}>
-                ← Quay lại lịch sử đặt phòng
-              </button>
-            </div>
-          </section>
-        </main>
+        {errorView}
       </>
     );
   }
@@ -170,12 +621,10 @@ function BookingDetailPage() {
   const productCost = booking.productTotal || 0;
   const finalCost = booking.finalTotal || (roomCost + productCost - (booking.discountAmount || 0));
 
-  return (
-    <>
-      <Header />
-      <main className="booking-page detail-page">
-        {/* 2. Detail Container */}
-        <section className="booking-content detail-content">
+  const pageBody = (
+    <main className="booking-page detail-page" style={isDashboardRole ? { padding: 0, minHeight: "auto", background: "none", height: "100%", width: "100%" } : {}}>
+      {/* 2. Detail Container */}
+      <section className="booking-content detail-content" style={isDashboardRole ? { maxWidth: "100%", padding: 0, boxShadow: "none", background: "none", height: "auto", overflow: "visible" } : {}}>
         <header className="detail-header">
           <button className="back-link-btn" onClick={() => navigate("/bookinghistory")}>
             ← Quay lại Lịch sử đặt phòng
@@ -321,29 +770,188 @@ function BookingDetailPage() {
               </div>
             </div>
 
-            {/* Interactive Actions for Unpaid / Pending */}
-            {booking.status === "pending" && (
-              <div className="detail-actions-panel">
-                {booking.paymentStatus === "unpaid" && (
-                  <button
-                    className="detail-action-btn detail-action-btn--pay"
-                    onClick={handlePayNow}
-                    disabled={submitting}
-                  >
-                    {submitting ? "Đang xử lý..." : "💳 Thanh toán ngay (VietQR)"}
-                  </button>
-                )}
-                <button
-                  className="detail-action-btn detail-action-btn--cancel"
-                  onClick={handleCancelBooking}
-                  disabled={submitting}
-                >
-                  {submitting ? "Đang xử lý..." : "🚫 Hủy đơn đặt phòng"}
-                </button>
-              </div>
-            )}
+            {/* Interactive Actions Panel based on user Role and Status */}
+            {(() => {
+              const roleName = (currentUser?.role?.name || currentUser?.role || "").toLowerCase();
+              const isCustomer = roleName === "customer";
+              const isStaffOrOwner = roleName === "staff" || roleName === "owner";
+
+              return (
+                <div className="detail-actions-panel">
+                  {/* Customer specific flow */}
+                  {isCustomer && (
+                    <>
+                      {booking.status === "pending" && (
+                        <>
+                          {booking.paymentStatus === "unpaid" && (
+                            <button
+                              type="button"
+                              className="detail-action-btn detail-action-btn--pay"
+                              onClick={handlePayNow}
+                              disabled={submitting}
+                            >
+                              {submitting ? "Đang xử lý..." : "💳 Thanh toán ngay (VietQR)"}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="detail-action-btn detail-action-btn--cancel"
+                            onClick={handleCancelBooking}
+                            disabled={submitting}
+                          >
+                            {submitting ? "Đang xử lý..." : "🚫 Hủy đặt phòng"}
+                          </button>
+                        </>
+                      )}
+                      {booking.status === "confirmed" && (
+                        <button
+                          type="button"
+                          className="detail-action-btn"
+                          style={{
+                            backgroundColor: "#f59e0b",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "12px",
+                            padding: "14px",
+                            fontSize: "0.95rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "background-color 0.2s"
+                          }}
+                          onClick={handleRequestRefund}
+                          disabled={submitting}
+                        >
+                          {submitting ? "Đang xử lý..." : "✉️ Gửi yêu cầu hủy & hoàn tiền"}
+                        </button>
+                      )}
+                      {booking.status === "completed" && !feedback && (
+                        <button
+                          type="button"
+                          className="detail-action-btn detail-action-btn--pay"
+                          style={{ backgroundColor: "#0f766e" }}
+                          onClick={() => {
+                            setFeedbackRating(5);
+                            setFeedbackComment("");
+                            setShowFeedbackModal(true);
+                          }}
+                          disabled={submitting}
+                        >
+                          ⭐ Viết đánh giá phản hồi
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* Staff / Owner specific flow */}
+                  {isStaffOrOwner && (
+                    <>
+                      {booking.status === "pending" && (
+                        <button
+                          type="button"
+                          className="detail-action-btn detail-action-btn--cancel"
+                          onClick={handleCancelBooking}
+                          disabled={submitting}
+                        >
+                          {submitting ? "Đang xử lý..." : "🚫 Hủy đơn đặt phòng"}
+                        </button>
+                      )}
+                      {booking.status === "confirmed" && (
+                        <>
+                          <button
+                            type="button"
+                            className="detail-action-btn detail-action-btn--pay"
+                            style={{ backgroundColor: "#10b981" }}
+                            onClick={handleCompleteBooking}
+                            disabled={submitting}
+                          >
+                            {submitting ? "Đang xử lý..." : "✅ Xác nhận hoàn thành"}
+                          </button>
+                          <button
+                            type="button"
+                            className="detail-action-btn detail-action-btn--cancel"
+                            onClick={handleCancelBooking}
+                            disabled={submitting}
+                          >
+                            {submitting ? "Đang xử lý..." : "🚫 Hủy đơn đặt phòng"}
+                          </button>
+                        </>
+                      )}
+                      {booking.status === "request_refund" && roleName === "owner" && (
+                        <button
+                          type="button"
+                          className="detail-action-btn detail-action-btn--pay"
+                          style={{ backgroundColor: "#3b82f6" }}
+                          onClick={() => setShowApproveModal(true)}
+                          disabled={submitting}
+                        >
+                          {submitting ? "Đang xử lý..." : "💳 Xác nhận hoàn tiền"}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
+
+        {refund && (
+          <div className="refund-info-card">
+            <div className="info-block">
+              <h3>💸 Thông tin yêu cầu hoàn tiền</h3>
+              <div className="info-box-rows">
+                <div className="info-box-row">
+                  <span>Trạng thái yêu cầu:</span>
+                  <strong>{refund.status === "pending" ? "ĐANG CHỜ DUYỆT" : refund.status === "refunded" ? "ĐÃ HOÀN TIỀN" : refund.status.toUpperCase()}</strong>
+                </div>
+                <div className="info-box-row">
+                  <span>Số tiền hoàn trả:</span>
+                  <strong style={{ color: "var(--primary)" }}>{formatCurrency(refund.amount)}</strong>
+                </div>
+                <div className="info-box-row flex-col">
+                  <span>Lý do & Thông tin nhận tiền:</span>
+                  <p className="detail-notes-text">"{refund.reason}"</p>
+                </div>
+                {refund.adminNotes && (
+                  <div className="info-box-row flex-col">
+                    <span>Ghi chú từ Owner:</span>
+                    <p className="detail-notes-text" style={{ backgroundColor: "#ecfdf5", borderColor: "#a7f3d0" }}>"{refund.adminNotes}"</p>
+                  </div>
+                )}
+                {refund.proofImage && (
+                  <div className="info-box-row flex-col">
+                    <span>Ảnh minh chứng chuyển khoản:</span>
+                    <img src={refund.proofImage} alt="Chứng từ hoàn tiền" className="refund-proof-img" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {feedback && (
+          <div className="refund-info-card" style={{ marginTop: "20px" }}>
+            <div className="info-block">
+              <h3>⭐ Đánh giá phản hồi của bạn</h3>
+              <div className="info-box-rows">
+                <div className="info-box-row">
+                  <span>Đánh giá:</span>
+                  <strong style={{ color: "#f59e0b", fontSize: "1.1rem" }}>
+                    {"★".repeat(feedback.rating)}
+                    {"☆".repeat(5 - feedback.rating)}
+                    <span style={{ marginLeft: "6px", color: "#6b7280", fontSize: "0.9rem" }}>({feedback.rating}/5)</span>
+                  </strong>
+                </div>
+                {feedback.comment && (
+                  <div className="info-box-row flex-col">
+                    <span>Nội dung phản hồi:</span>
+                    <p className="detail-notes-text">"{feedback.comment}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Payment QR Modal */}
@@ -359,7 +967,192 @@ function BookingDetailPage() {
           setIsQrOpen(false);
         }}
       />
+
+      {/* Customer Refund Modal */}
+      {showRefundModal && (
+        <div className="refund-modal-backdrop">
+          <div className="refund-modal-content">
+            <div className="refund-modal-header">
+              <h2>Yêu cầu hủy & hoàn tiền</h2>
+            </div>
+            <form onSubmit={handleCustomerRefundSubmit}>
+              <div className="refund-modal-body">
+                <div className="refund-modal-field">
+                  <label>Số tiền được hoàn trả</label>
+                  <input
+                    type="text"
+                    value={formatCurrency(finalCost)}
+                    readOnly
+                  />
+                </div>
+                <div className="refund-modal-field">
+                  <label>Nhập lý do hủy & Thông tin tài khoản nhận hoàn tiền *</label>
+                  <textarea
+                    placeholder="Ví dụ: Bận việc đột xuất. Xin hoàn tiền về số TK: 123456789 - Ngân hàng Vietcombank - Chủ TK: Nguyễn Văn A"
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="refund-modal-footer">
+                <button
+                  type="button"
+                  className="refund-modal-btn refund-modal-btn--cancel"
+                  onClick={() => setShowRefundModal(false)}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="refund-modal-btn refund-modal-btn--submit"
+                  disabled={submitting}
+                >
+                  {submitting ? "Đang gửi..." : "Gửi yêu cầu"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Owner Approve Refund Modal */}
+      {showApproveModal && (
+        <div className="refund-modal-backdrop">
+          <div className="refund-modal-content">
+            <div className="refund-modal-header">
+              <h2>Xác nhận hoàn tiền</h2>
+            </div>
+            <form onSubmit={handleOwnerApproveSubmit}>
+              <div className="refund-modal-body">
+                <div className="refund-modal-field">
+                  <label>Thông tin nhận tiền của khách hàng</label>
+                  <textarea
+                    value={refund?.reason}
+                    readOnly
+                    style={{ minHeight: "80px" }}
+                  />
+                </div>
+                <div className="refund-modal-field">
+                  <label>Số tiền cần chuyển khoản hoàn trả</label>
+                  <input
+                    type="text"
+                    value={formatCurrency(refund?.amount)}
+                    readOnly
+                  />
+                </div>
+                <div className="refund-modal-field">
+                  <label>Tải lên ảnh minh chứng giao dịch chuyển khoản *</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    required
+                  />
+                  {proofImageBase64 && (
+                    <div className="img-preview-container">
+                      <img src={proofImageBase64} alt="Preview" />
+                    </div>
+                  )}
+                </div>
+                <div className="refund-modal-field">
+                  <label>Ghi chú hoàn tiền (nếu có)</label>
+                  <textarea
+                    placeholder="Nhập ghi chú hoặc thông báo cho khách hàng..."
+                    value={ownerNotes}
+                    onChange={(e) => setOwnerNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="refund-modal-footer">
+                <button
+                  type="button"
+                  className="refund-modal-btn refund-modal-btn--cancel"
+                  onClick={() => {
+                    setShowApproveModal(false);
+                    setProofImageBase64("");
+                  }}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="submit"
+                  className="refund-modal-btn refund-modal-btn--submit"
+                  disabled={submitting}
+                >
+                  {submitting ? "Đang xử lý..." : "Xác nhận hoàn thành"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="refund-modal-backdrop">
+          <div className="refund-modal-content">
+            <div className="refund-modal-header">
+              <h2>Đánh giá & Phản hồi dịch vụ</h2>
+            </div>
+            <form onSubmit={handleFeedbackSubmit}>
+              <div className="refund-modal-body">
+                <div className="refund-modal-field">
+                  <label style={{ marginBottom: "12px", display: "block" }}>Chọn số sao đánh giá *</label>
+                  <div style={{ display: "flex", gap: "10px", fontSize: "2rem", cursor: "pointer" }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        onClick={() => setFeedbackRating(star)}
+                        style={{ color: star <= feedbackRating ? "#f59e0b" : "#d1d5db" }}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="refund-modal-field">
+                  <label>Ý kiến đóng góp phản hồi (nếu có)</label>
+                  <textarea
+                    placeholder="Hãy chia sẻ trải nghiệm của bạn về dịch vụ phòng và F&B..."
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+              <div className="refund-modal-footer">
+                <button
+                  type="button"
+                  className="refund-modal-btn refund-modal-btn--cancel"
+                  onClick={() => setShowFeedbackModal(false)}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="refund-modal-btn refund-modal-btn--submit"
+                  style={{ backgroundColor: "#0f766e" }}
+                  disabled={submitting}
+                >
+                  {submitting ? "Đang gửi..." : "Gửi đánh giá"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
+  );
+
+  if (isDashboardRole) {
+    return renderDashboardWrapper(pageBody);
+  }
+
+  return (
+    <>
+      <Header />
+      {pageBody}
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import BookingPage from "./pages/booking/BookingPage";
+import WalkinBookingPage from "./pages/booking/WalkinBookingPage";
 import BookingHistoryPage from "./pages/booking/BookingHistoryPage";
 import BookingDetailPage from "./pages/booking/BookingDetailPage";
 import LoginPage from "./pages/authentication/LoginPage";
@@ -25,6 +26,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/booking" element={<BookingPage />} />
+        <Route path="/walkin" element={<WalkinBookingPage />} />
         <Route path="/bookinghistory" element={<BookingHistoryPage />} />
         <Route path="/booking/:id" element={<BookingDetailPage />} />
         <Route path="*" element={<Navigate to="/booking" replace />} />

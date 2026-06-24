@@ -135,6 +135,14 @@ function CategoriesPage() {
       navigate("/feedbacks");
       return;
     }
+    if (key === "bookinghistory") {
+      navigate("/bookinghistory");
+      return;
+    }
+    if (key === "walkin") {
+      navigate("/walkin");
+      return;
+    }
     if (key === "room") {
       navigate("/room");
       return;

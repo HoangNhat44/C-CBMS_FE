@@ -30,6 +30,7 @@ export const staffMenuItems = [
     section: "Đặt chỗ",
     items: [
       { icon: "ti-calendar-plus", label: "Đặt phòng tại quầy", key: "walkin", badge: "Nhanh" },
+      { icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory" },
     ],
   },
 ];
@@ -151,6 +152,14 @@ export default function StaffDashboard() {
           }
           if (key === "review") {
             navigate("/feedbacks");
+            return;
+          }
+          if (key === "bookinghistory") {
+            navigate("/bookinghistory");
+            return;
+          }
+          if (key === "walkin") {
+            navigate("/walkin");
             return;
           }
           setActive(key);

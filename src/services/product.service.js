@@ -3,7 +3,8 @@ import { API_ENDPOINTS } from "../constants";
 
 const productService = {
   getAllProducts: (params = {}) => {
-    return apiClient.get(API_ENDPOINTS.PRODUCTS, { params });
+    const resolvedParams = typeof params === "string" ? { branchId: params } : params;
+    return apiClient.get(API_ENDPOINTS.PRODUCTS, { params: resolvedParams });
   },
   getProductById: (id) => {
     return apiClient.get(`${API_ENDPOINTS.PRODUCTS}/${id}`);

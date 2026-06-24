@@ -12,6 +12,10 @@ export const ownerMenuItems = [
     items: [{ icon: "ti-chart-bar", label: "Doanh thu", badge: "Mới", key: "revenue" }],
   },
   {
+    section: "Đặt phòng",
+    items: [{ icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory" }],
+  },
+  {
     section: "Cơ sở vật chất",
     items: [
       { icon: "ti-building", label: "Quản lý cơ sở", key: "facility" },
@@ -174,6 +178,10 @@ export default function OwnerDashboard() {
           }
           if (key === "review") {
             navigate("/feedbacks");
+            return;
+          }
+          if (key === "bookinghistory") {
+            navigate("/bookinghistory");
             return;
           }
           setActive(key);
