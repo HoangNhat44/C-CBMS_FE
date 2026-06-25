@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import { ownerMenuItems } from "../dashboard/Owner";
 import { staffMenuItems } from "../dashboard/Staff";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import Topbar from "../../components/Topbar";
 import productService from "../../services/product.service";
 import branchService from "../../services/branch.service";
 import categoryService from "../../services/category.service";
@@ -35,16 +35,6 @@ function decodeToken(token) {
   }
 }
 
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-}
-
 function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -69,9 +59,6 @@ function ProductsPage() {
 
   // Layout states
   const [user, setUser] = useState(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
-  const dropRef = useRef(null);
   const navigate = useNavigate();
 
   const isStaff = user?.role === "staff" || (!user?.role && localStorage.getItem("current_dashboard") === "staff");
@@ -102,16 +89,16 @@ function ProductsPage() {
       // 3. Fetch products
       const params = {};
       if (selectedCategory) params.categoryId = selectedCategory;
-      
+
       const tokenUser = decodeToken(localStorage.getItem("token"));
       const isStaffUser = tokenUser?.role === "staff";
-      
+
       if (isStaffUser && tokenUser?.branchId) {
         params.branchId = tokenUser.branchId;
       } else if (selectedBranch) {
         params.branchId = selectedBranch;
       }
-      
+
       const productRes = await productService.getAllProducts(params);
       setProducts(productRes.data?.data || []);
     } catch (err) {
@@ -141,16 +128,7 @@ function ProductsPage() {
     fetchData();
   }, [fetchData]);
 
-  // Click outside to close dropdown
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setDropOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   // Auto-hide success message after 5 seconds
   useEffect(() => {
@@ -175,7 +153,6 @@ function ProductsPage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
-    setDropOpen(false);
     navigate("/login", { replace: true });
   };
 
@@ -207,6 +184,18 @@ function ProductsPage() {
     }
     if (key === "news") {
       navigate("/news");
+      return;
+    }
+    if (key === "facility") {
+      navigate("/branches");
+      return;
+    }
+    if (key === "slot") {
+      navigate("/slots");
+      return;
+    }
+    if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
+      navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard", { state: { activeTab: key } });
       return;
     }
     navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
@@ -264,10 +253,10 @@ function ProductsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const isStaffUser = userRole === "staff";
-    
+
     // For staff, branch is automatically linked in the BE, so we do not enforce client-side selection
     const finalBranches = isStaffUser ? [] : form.availableBranches;
-    
+
     if (!form.name || !form.price || (!isStaffUser && finalBranches.length === 0)) {
       setError("Vui lòng nhập đầy đủ Tên, Giá và chọn ít nhất 1 Chi nhánh");
       return;
@@ -325,15 +314,14 @@ function ProductsPage() {
     }
   };
 
-  const initials = getInitials(user?.fullName || user?.email || "");
   const userRole = isStaff ? "staff" : isOwner ? "owner" : "guest";
   const isStaffOrOwner = isOwner || isStaff;
 
   // Client-side search and status filter
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
     // Status filter
     const matchesStatus = statusFilter === "" ? true : (statusFilter === "active" ? p.isActive : !p.isActive);
 
@@ -353,66 +341,7 @@ function ProductsPage() {
       />
 
       <div className="main">
-        {/* Topbar */}
-        <div className="topbar">
-          <div className="topbar-left">
-            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-            <span className="breadcrumb-active">Quản lý thực đơn</span>
-          </div>
-          <div className="topbar-right">
-            <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
-              <div className="tb-avatar">{initials}</div>
-              <div>
-                <div className="tb-uname">{user?.fullName || user?.email}</div>
-                <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
-              </div>
-              <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
-
-              {dropOpen && (
-                <div className="products-user-menu" style={{
-                  position: "absolute", top: "calc(100% + 10px)", right: 0,
-                  background: "#fff", border: "1px solid var(--border)",
-                  borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
-                  minWidth: 180, zIndex: 200, overflow: "hidden",
-                }}>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDropOpen(false);
-                      setCpModalOpen(true);
-                    }}
-                    style={{
-                      width: "100%", padding: "11px 16px",
-                      background: "none", border: "none",
-                      display: "flex", alignItems: "center", gap: 8,
-                      fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
-                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                    }}
-                  >
-                    <i className="ti ti-key" />
-                    Đổi mật khẩu
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    style={{
-                      width: "100%", padding: "11px 16px",
-                      background: "none", border: "none",
-                      display: "flex", alignItems: "center", gap: 8,
-                      fontSize: 13, fontWeight: 700, color: "#b42318",
-                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                      borderTop: "1px solid var(--border-light)"
-                    }}
-                  >
-                    <i className="ti ti-logout" />
-                    Đăng xuất
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <Topbar breadcrumbs={[{ label: "Trang chủ", link: isStaff ? "/staff-dashboard" : "/owner-dashboard" }, { label: "Quản lý thực đơn" }]} />
 
         <div className="content">
           <header className="products-header">
@@ -514,7 +443,7 @@ function ProductsPage() {
                       )}
                       <span className="product-card__category">{prodCategory}</span>
                     </div>
-                    
+
                     <div className="product-card__content">
                       <div className="product-card__title-row">
                         <h3 className="product-card__name">{product.name}</h3>
@@ -524,9 +453,9 @@ function ProductsPage() {
                           </span>
                         )}
                       </div>
-                      
+
                       <p className="product-card__desc">{product.description || "Chưa có mô tả chi tiết."}</p>
-                      
+
                       {userRole !== "staff" && (
                         <div className="product-card__branches">
                           <div className="product-card__branches-header">
@@ -554,8 +483,8 @@ function ProductsPage() {
 
                       {isStaffOrOwner && (
                         <div className="product-card__actions">
-                          <button 
-                            className={`btn-toggle-status ${product.isActive ? "active" : "inactive"}`} 
+                          <button
+                            className={`btn-toggle-status ${product.isActive ? "active" : "inactive"}`}
                             onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
                             title={product.isActive ? "Tạm dừng kinh doanh" : "Mở bán lại"}
                           >
@@ -734,12 +663,12 @@ function ProductsPage() {
                 </div>
                 {userRole !== "staff" && (
                   <div className="detail-item">
-                     <strong>Bán tại chi nhánh:</strong>
-                     <div className="detail-branches">
-                       {selectedDetailProduct.availableBranches && selectedDetailProduct.availableBranches.length > 0
-                         ? selectedDetailProduct.availableBranches.map(b => b.name || "Chi nhánh").join(", ")
-                         : "Chưa có chi nhánh"}
-                     </div>
+                    <strong>Bán tại chi nhánh:</strong>
+                    <div className="detail-branches">
+                      {selectedDetailProduct.availableBranches && selectedDetailProduct.availableBranches.length > 0
+                        ? selectedDetailProduct.availableBranches.map(b => b.name || "Chi nhánh").join(", ")
+                        : "Chưa có chi nhánh"}
+                    </div>
                   </div>
                 )}
               </div>
@@ -751,7 +680,6 @@ function ProductsPage() {
         </div>
       )}
 
-      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }

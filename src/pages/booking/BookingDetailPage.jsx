@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import bookingAPI from "../../services/booking.service";
 import paymentAPI from "../../services/payment.service";
@@ -8,7 +8,7 @@ import authAPI from "../../services/auth.service";
 import PaymentQRModal from "../../components/PaymentQRModal";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import Topbar from "../../components/Topbar";
 import { ownerMenuItems } from "../dashboard/Owner";
 import { staffMenuItems } from "../dashboard/Staff";
 import "../dashboard/Dashboard.css";
@@ -23,15 +23,7 @@ function decodeToken(token) {
   }
 }
 
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-}
+
 
 function BookingDetailPage() {
   const { id: bookingId } = useParams();
@@ -73,26 +65,13 @@ function BookingDetailPage() {
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackComment, setFeedbackComment] = useState("");
 
-  // Dashboard UI States
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
-  const dropRef = useRef(null);
 
-  // Click outside to close dropdown
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setDropOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
+
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     setCurrentUser(null);
-    setDropOpen(false);
     navigate("/login", { replace: true });
   };
 
@@ -448,7 +427,6 @@ function BookingDetailPage() {
 
   const roleName = (currentUser?.role?.name || currentUser?.role || getRoleFromToken() || "").toLowerCase();
   const isDashboardRole = roleName === "owner" || roleName === "staff";
-  const initials = getInitials(currentUser?.fullName || currentUser?.email || "");
   const menuItems = roleName === "staff" ? staffMenuItems : ownerMenuItems;
 
   const renderDashboardWrapper = (child) => {
@@ -473,7 +451,13 @@ function BookingDetailPage() {
               else if (key === "product") navigate("/products");
               else if (key === "review") navigate("/feedbacks");
               else if (key === "bookinghistory") navigate("/bookinghistory");
-              else navigate("/owner-dashboard");
+              else if (key === "facility") navigate("/branches");
+              else if (key === "slot") navigate("/slots");
+              else if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
+                navigate("/owner-dashboard", { state: { activeTab: key } });
+              } else {
+                navigate("/owner-dashboard");
+              }
             }
           }}
           handleLogout={handleLogout}
@@ -481,85 +465,7 @@ function BookingDetailPage() {
         />
 
         <div className="main">
-          {/* Topbar */}
-          <div className="topbar">
-            <div className="topbar-left">
-              <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-              <span className="breadcrumb">Lịch sử đặt phòng&nbsp;/&nbsp;</span>
-              <span className="breadcrumb-active">Chi tiết đơn đặt</span>
-            </div>
-            <div className="topbar-right">
-              {currentUser && (
-                <div
-                  className="tb-user"
-                  ref={dropRef}
-                  style={{ position: "relative" }}
-                  onClick={() => setDropOpen((v) => !v)}
-                >
-                  <div className="tb-avatar">{initials}</div>
-                  <div>
-                    <div className="tb-uname">{currentUser.fullName || currentUser.email}</div>
-                    <div className="tb-role" style={{ textTransform: "capitalize" }}>{roleName}</div>
-                  </div>
-                  <i
-                    className="ti ti-chevron-down"
-                    style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }}
-                  />
-
-                  {dropOpen && (
-                    <div style={{
-                      position: "absolute", top: "calc(100% + 10px)", right: 0,
-                      background: "#fff", border: "1px solid var(--border)",
-                      borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
-                      minWidth: 180, zIndex: 200, overflow: "hidden",
-                    }}>
-                      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)" }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-dark)" }}>
-                          {currentUser.fullName || currentUser.email}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, textTransform: "capitalize" }}>
-                          {roleName}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setDropOpen(false);
-                          setCpModalOpen(true);
-                        }}
-                        style={{
-                          width: "100%", padding: "11px 16px",
-                          background: "none", border: "none",
-                          display: "flex", alignItems: "center", gap: 8,
-                          fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
-                          cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                      >
-                        <i className="ti ti-key" style={{ fontSize: 16 }} />
-                        Đổi mật khẩu
-                      </button>
-                      <button
-                        onClick={handleLogout}
-                        style={{
-                          width: "100%", padding: "11px 16px",
-                          background: "none", border: "none",
-                          display: "flex", alignItems: "center", gap: 8,
-                          fontSize: 13, fontWeight: 700, color: "#b42318",
-                          cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "#fff1f0"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                      >
-                        <i className="ti ti-logout" style={{ fontSize: 16 }} />
-                        Đăng xuất
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <Topbar breadcrumbs={[{ label: "Trang chủ", link: roleName === "staff" ? "/staff-dashboard" : "/owner-dashboard" }, { label: "Lịch sử đặt phòng", link: "/bookinghistory" }, { label: "Chi tiết đơn đặt" }]} />
 
           {/* Content */}
           <div className="content" style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
@@ -567,10 +473,6 @@ function BookingDetailPage() {
           </div>
         </div>
 
-        <ChangePasswordModal 
-          isOpen={cpModalOpen} 
-          onClose={() => setCpModalOpen(false)} 
-        />
       </div>
     );
   };

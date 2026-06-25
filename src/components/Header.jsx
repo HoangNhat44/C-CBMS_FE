@@ -117,6 +117,25 @@ export default function Header() {
                   <button
                     onClick={() => {
                       setDropOpen(false);
+                      navigate("/profile");
+                    }}
+                    style={{
+                      width: "100%", padding: "11px 16px",
+                      background: "none", border: "none",
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
+                      cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                  >
+                    <i className="ti ti-user" style={{ fontSize: 16 }} />
+                    Trang cá nhân
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setDropOpen(false);
                       setCpModalOpen(true);
                     }}
                     style={{

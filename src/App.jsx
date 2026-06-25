@@ -20,6 +20,9 @@ import RoomTypePage from "./pages/roomType/RoomTypePage";
 import ProductsPage from "./pages/product/ProductsPage";
 import CategoriesPage from "./pages/category/CategoriesPage";
 import FeedbacksPage from "./pages/feedback/FeedbacksPage";
+import BranchesPage from "./pages/branch/BranchesPage";
+import SlotsPage from "./pages/slot/SlotsPage";
+import MyProfilePage from "./pages/profile/MyProfilePage";
 
 function App() {
   return (
@@ -47,9 +50,13 @@ function App() {
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/feedbacks" element={<FeedbacksPage />} />
+        <Route path="/branches" element={<BranchesPage />} />
+        <Route path="/slots" element={<SlotsPage />} />
+        <Route path="/profile" element={<MyProfilePage />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
 export default App;
+

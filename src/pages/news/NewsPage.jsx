@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import Topbar from "../../components/Topbar";
 import { ownerMenuItems } from "../dashboard/Owner";
 import newsAPI from "../../services/news.service";
 import "../dashboard/Dashboard.css";
@@ -25,30 +25,9 @@ const fallbackNews = [
   },
 ];
 
-function decodeToken(token) {
-  try {
-    return JSON.parse(atob(token.split(".")[1]));
-  } catch {
-    return null;
-  }
-}
-
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => word[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-}
-
 export default function NewsPage() {
   const navigate = useNavigate();
-  const dropRef = useRef(null);
-  const [user, setUser] = useState(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
+
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingNews, setEditingNews] = useState(null);
@@ -58,24 +37,18 @@ export default function NewsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const decoded = token ? decodeToken(token) : null;
-
-    setUser(
-      decoded && decoded.exp * 1000 > Date.now()
-        ? decoded
-        : { email: "owner@c-cbms.local", fullName: "Owner", role: "owner" }
-    );
-  }, []);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropRef.current && !dropRef.current.contains(event.target)) {
-        setDropOpen(false);
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        if (decoded && decoded.exp * 1000 > Date.now()) {
+          // Valid token logic
+        } else {
+          localStorage.removeItem("token");
+        }
+      } catch {
+        localStorage.removeItem("token");
       }
     }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchNews = async () => {
@@ -101,18 +74,23 @@ export default function NewsPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setUser(null);
-    setDropOpen(false);
+
     navigate("/login", { replace: true });
   };
 
   const handleMenuChange = (key) => {
     if (key === "news") return;
-    if (key === "room") {
-      navigate("/room");
-      return;
+    if (key === "room") { navigate("/room"); return; }
+    else if (key === "roomtype") { navigate("/roomtype"); return; }
+    else if (key === "category") { navigate("/categories"); return; }
+    else if (key === "product") { navigate("/products"); return; }
+    else if (key === "review") { navigate("/feedbacks"); return; }
+    else if (key === "bookinghistory") { navigate("/bookinghistory"); return; }
+    else if (key === "facility") { navigate("/branches"); return; }
+    else if (key === "slot") { navigate("/slots"); return; }
+    else {
+      navigate("/owner-dashboard", { state: { activeTab: key } });
     }
-    navigate("/owner-dashboard");
   };
 
   const openCreateForm = () => {
@@ -190,8 +168,6 @@ export default function NewsPage() {
     }
   };
 
-  const initials = getInitials(user?.fullName || user?.email || "");
-
   return (
     <div className="dash">
       <Sidebar
@@ -203,42 +179,7 @@ export default function NewsPage() {
       />
 
       <div className="main">
-        <div className="topbar">
-          <div className="topbar-left">
-            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-            <span className="breadcrumb-active">Quản lý tin tức</span>
-          </div>
-          <div className="topbar-right">
-            <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
-              <div className="tb-avatar">{initials}</div>
-              <div>
-                <div className="tb-uname">{user?.fullName || user?.email}</div>
-                <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
-              </div>
-              <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
-
-              {dropOpen && (
-                <div className="news-user-menu">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDropOpen(false);
-                      setCpModalOpen(true);
-                    }}
-                  >
-                    <i className="ti ti-key" />
-                    Đổi mật khẩu
-                  </button>
-                  <button type="button" className="danger" onClick={handleLogout}>
-                    <i className="ti ti-logout" />
-                    Đăng xuất
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/owner-dashboard" }, { label: "Quản lý tin tức" }]} />
 
         <div className="content">
           <div className="news-page-head">
@@ -362,7 +303,6 @@ export default function NewsPage() {
         </div>
       </div>
 
-      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }

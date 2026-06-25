@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import branchAPI from "../../services/branch.service";
@@ -9,8 +9,8 @@ import authAPI from "../../services/auth.service";
 import promotionAPI from "../../services/promotion.service";
 import PaymentQRModal from "../../components/PaymentQRModal";
 import Sidebar from "../../components/Sidebar";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
 import { staffMenuItems } from "../dashboard/Staff";
+import Topbar from "../../components/Topbar";
 import "./BookingPage.css";
 import "../dashboard/Dashboard.css";
 
@@ -52,15 +52,7 @@ const abbreviatePrice = (value) => {
   return value;
 };
 
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-}
+
 
 export default function WalkinBookingPage() {
   const navigate = useNavigate();
@@ -83,10 +75,7 @@ export default function WalkinBookingPage() {
   const [selectedProducts, setSelectedProducts] = useState({}); // { [productId]: quantity }
   
   // Staff & Guest Selection & Auth State
-  const [currentUser, setCurrentUser] = useState(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
-  const dropRef = useRef(null);
+
 
   const [guestForm, setGuestForm] = useState({
     fullName: "",
@@ -115,8 +104,7 @@ export default function WalkinBookingPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setCurrentUser(null);
-    setDropOpen(false);
+
     navigate("/login", { replace: true });
   };
 
@@ -135,7 +123,7 @@ export default function WalkinBookingPage() {
           const verifyRes = await authAPI.verifyToken();
           if (verifyRes.data?.success) {
             const userObj = verifyRes.data.data.user;
-            setCurrentUser(userObj);
+            // Valid token, state set not needed
 
             const bId = userObj.branchId?._id || userObj.branchId;
             if (bId) {
@@ -169,15 +157,7 @@ export default function WalkinBookingPage() {
     loadInitialData();
   }, [navigate]);
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setDropOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   // Fetch products and layout data on branch/date change
   useEffect(() => {
@@ -511,8 +491,7 @@ export default function WalkinBookingPage() {
     }
   };
 
-  const initials = getInitials(currentUser?.fullName || currentUser?.email || "");
-  const roleName = (currentUser?.role?.name || currentUser?.role || "").toLowerCase();
+
 
   return (
     <div className="dash dash--staff">
@@ -546,84 +525,7 @@ export default function WalkinBookingPage() {
       />
 
       <div className="main">
-        {/* Topbar */}
-        <div className="topbar">
-          <div className="topbar-left">
-            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-            <span className="breadcrumb-active">Đặt phòng tại quầy</span>
-          </div>
-          <div className="topbar-right">
-            {currentUser && (
-              <div
-                className="tb-user"
-                ref={dropRef}
-                style={{ position: "relative" }}
-                onClick={() => setDropOpen((v) => !v)}
-              >
-                <div className="tb-avatar">{initials}</div>
-                <div>
-                  <div className="tb-uname">{currentUser.fullName || currentUser.email}</div>
-                  <div className="tb-role" style={{ textTransform: "capitalize" }}>{roleName}</div>
-                </div>
-                <i
-                  className="ti ti-chevron-down"
-                  style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }}
-                />
-
-                {dropOpen && (
-                  <div style={{
-                    position: "absolute", top: "calc(100% + 10px)", right: 0,
-                    background: "#fff", border: "1px solid var(--border)",
-                    borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
-                    minWidth: 180, zIndex: 200, overflow: "hidden",
-                  }}>
-                    <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-dark)" }}>
-                        {currentUser.fullName || currentUser.email}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, textTransform: "capitalize" }}>
-                        {roleName}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setDropOpen(false);
-                        setCpModalOpen(true);
-                      }}
-                      style={{
-                        width: "100%", padding: "11px 16px",
-                        background: "none", border: "none",
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
-                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                    >
-                      <i className="ti ti-key" style={{ fontSize: 16 }} />
-                      Đổi mật khẩu
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      style={{
-                        width: "100%", padding: "11px 16px",
-                        background: "none", border: "none",
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 13, fontWeight: 700, color: "#b42318",
-                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "#fff1f0"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                    >
-                      <i className="ti ti-logout" style={{ fontSize: 16 }} />
-                      Đăng xuất
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/staff-dashboard" }, { label: "Đặt phòng tại quầy" }]} />
 
         {/* Content Area */}
         <div className="content" style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
@@ -1107,10 +1009,6 @@ export default function WalkinBookingPage() {
         </div>
       </div>
 
-      <ChangePasswordModal 
-        isOpen={cpModalOpen} 
-        onClose={() => setCpModalOpen(false)} 
-      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import Topbar from "../../components/Topbar";
 import { ownerMenuItems } from "../dashboard/Owner";
 import roomTypeAPI from "../../services/roomType.service";
 import "../dashboard/Dashboard.css";
@@ -38,30 +38,9 @@ const fallbackRoomTypes = [
   },
 ];
 
-function decodeToken(token) {
-  try {
-    return JSON.parse(atob(token.split(".")[1]));
-  } catch {
-    return null;
-  }
-}
-
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => word[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-}
-
 export default function RoomTypePage() {
   const navigate = useNavigate();
-  const dropRef = useRef(null);
-  const [user, setUser] = useState(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
+
   const [roomTypes, setRoomTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingRoomType, setEditingRoomType] = useState(null);
@@ -69,27 +48,9 @@ export default function RoomTypePage() {
   const [formData, setFormData] = useState(emptyForm);
   const [apiOffline, setApiOffline] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const decoded = token ? decodeToken(token) : null;
 
-    setUser(
-      decoded && decoded.exp * 1000 > Date.now()
-        ? decoded
-        : { email: "owner@c-cbms.local", fullName: "Owner", role: "owner" }
-    );
-  }, []);
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropRef.current && !dropRef.current.contains(event.target)) {
-        setDropOpen(false);
-      }
-    }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const fetchRoomTypes = async () => {
     try {
@@ -114,16 +75,23 @@ export default function RoomTypePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setUser(null);
-    setDropOpen(false);
+
     navigate("/login", { replace: true });
   };
 
   const handleMenuChange = (key) => {
     if (key === "roomtype") return;
     if (key === "room") { navigate("/room"); return; }
-    if (key === "news") { navigate("/news"); return; }
-    navigate("/owner-dashboard");
+    else if (key === "news") { navigate("/news"); return; }
+    else if (key === "category") { navigate("/categories"); return; }
+    else if (key === "product") { navigate("/products"); return; }
+    else if (key === "review") { navigate("/feedbacks"); return; }
+    else if (key === "bookinghistory") { navigate("/bookinghistory"); return; }
+    else if (key === "facility") { navigate("/branches"); return; }
+    else if (key === "slot") { navigate("/slots"); return; }
+    else {
+      navigate("/owner-dashboard", { state: { activeTab: key } });
+    }
   };
 
   const openCreateForm = () => {
@@ -189,10 +157,10 @@ export default function RoomTypePage() {
 
   const handleToggleStatus = async (item) => {
     try {
-      const updatedData = { ...item, isActive: !item.isActive };
+
       const res = await roomTypeAPI.updateRoomType(item._id, { isActive: !item.isActive });
       if (!res.success) throw new Error(res.message || "Update room type failed");
-      
+
       setRoomTypes((prev) =>
         prev.map((roomType) => (roomType._id === item._id ? { ...roomType, isActive: !roomType.isActive } : roomType))
       );
@@ -205,8 +173,6 @@ export default function RoomTypePage() {
     }
   };
 
-  const initials = getInitials(user?.fullName || user?.email || "");
-
   return (
     <div className="dash">
       <Sidebar
@@ -218,42 +184,7 @@ export default function RoomTypePage() {
       />
 
       <div className="main">
-        <div className="topbar">
-          <div className="topbar-left">
-            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-            <span className="breadcrumb-active">Quản lý loại phòng</span>
-          </div>
-          <div className="topbar-right">
-            <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
-              <div className="tb-avatar">{initials}</div>
-              <div>
-                <div className="tb-uname">{user?.fullName || user?.email}</div>
-                <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
-              </div>
-              <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
-
-              {dropOpen && (
-                <div className="roomtype-user-menu">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDropOpen(false);
-                      setCpModalOpen(true);
-                    }}
-                  >
-                    <i className="ti ti-key" />
-                    Đổi mật khẩu
-                  </button>
-                  <button type="button" className="danger" onClick={handleLogout}>
-                    <i className="ti ti-logout" />
-                    Đăng xuất
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/owner-dashboard" }, { label: "Quản lý loại phòng" }]} />
 
         <div className="content">
           <div className="roomtype-page-head">
@@ -370,7 +301,6 @@ export default function RoomTypePage() {
         </div>
       </div>
 
-      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }

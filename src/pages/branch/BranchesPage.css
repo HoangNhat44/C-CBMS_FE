@@ -1,0 +1,102 @@
+/* BranchesScreen Design System (Light Theme Matching Categories/Products Page) */
+.branches-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.branches-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.branches-table th {
+  background: #f8fafc;
+  padding: 16px 24px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  font-weight: 800;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.branches-table td {
+  padding: 16px 24px;
+  font-size: 0.92rem;
+  color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.branches-table tr:hover td {
+  background: #f8fafc;
+}
+
+.branches-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Branch image thumbnail in table */
+.branch-table-thumb {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.branch-table-thumb-placeholder {
+  width: 64px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  border: 1px dashed #cbd5e1;
+}
+
+/* Image preview in form */
+.branch-form-img-preview {
+  margin-top: 10px;
+  width: 100%;
+  max-height: 160px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.branch-form-img-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.time-range-text {
+  font-weight: 600;
+  color: #0f766e !important;
+  font-size: 0.88rem !important;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Actions Cell & Alignment */
+.action-cell {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 52px;
+  align-items: center;
+}

@@ -1,0 +1,101 @@
+/* SlotsScreen Design System (Light Theme Matching Categories/Products Page) */
+.slots-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.slots-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.slots-table th {
+  background: #f8fafc;
+  padding: 16px 24px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  font-weight: 800;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.slots-table td {
+  padding: 16px 24px;
+  font-size: 0.92rem;
+  color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.slots-table tr:hover td {
+  background: #f8fafc;
+}
+
+.slots-table tr:last-child td {
+  border-bottom: none;
+}
+
+.time-range-display {
+  font-weight: 600;
+  color: #1e293b !important;
+  font-size: 0.92rem !important;
+}
+
+/* Time Type Badges (Golden Hour / Standard Hour) */
+.time-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-transform: none;
+}
+
+.time-type-badge.standard {
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.time-type-badge.golden {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.15);
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Actions Cell & Alignment */
+.action-cell {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 52px;
+  align-items: center;
+}
+
+/* Thanh cuộn dọc cho trang Slots */
+/* Cho phép phần content của trang Slots cuộn dọc */
+.dash>.main {
+  height: 100vh;
+  min-height: 0;
+}
+
+.dash>.main>.content {
+  flex: 1 1 auto;
+  height: calc(100vh - 58px);
+  max-height: calc(100vh - 58px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css"; // đường dẫn tuỳ cấu trúc project
 import Sidebar from "../../components/Sidebar";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import Topbar from "../../components/Topbar";
 
 export const staffMenuItems = [
   {
@@ -86,22 +86,11 @@ function decodeToken(token) {
 }
 
 export default function StaffDashboard() {
-  const [active, setActive]     = useState("category");
-  const navigate                = useNavigate();
-  const [user, setUser]         = useState(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
-  const dropRef                 = useRef(null);
+  const [active, setActive] = useState("category");
+  const navigate = useNavigate();
 
-  function getInitials(name = "") {
-    return name
-      .trim()
-      .split(" ")
-      .filter(Boolean)
-      .map((w) => w[0].toUpperCase())
-      .slice(0, 2)
-      .join("");
-  }
+
+
 
   useEffect(() => {
     localStorage.setItem("current_dashboard", "staff");
@@ -109,38 +98,27 @@ export default function StaffDashboard() {
     if (token) {
       const decoded = decodeToken(token);
       if (decoded && decoded.exp * 1000 > Date.now()) {
-        setUser(decoded);
+        // Valid token logic
       } else {
         localStorage.removeItem("token");
       }
     }
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setDropOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setUser(null);
-    setDropOpen(false);
+
     navigate("/login", { replace: true });
   };
-
-  const initials = getInitials(user?.fullName || user?.email || "");
   return (
     <div className="dash dash--staff">
 
       {/* ── SIDEBAR ── */}
-      <Sidebar 
-        menuItems={staffMenuItems} 
-        active={active} 
+      <Sidebar
+        menuItems={staffMenuItems}
+        active={active}
         setActive={(key) => {
           if (key === "category") {
             navigate("/categories");
@@ -163,101 +141,14 @@ export default function StaffDashboard() {
             return;
           }
           setActive(key);
-        }} 
-        handleLogout={handleLogout} 
+        }}
+        handleLogout={handleLogout}
         onLogoClick={() => navigate("/staff-dashboard")}
       />
 
-      {/* ── MAIN ── */}
       <div className="main">
-
         {/* Topbar */}
-        <div className="topbar">
-          <div className="topbar-left">
-            <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-            <span className="breadcrumb-active">Dashboard nhân viên</span>
-          </div>
-          <div className="nav-auth">
-            {user ? (
-              <div
-                className="tb-user"
-                ref={dropRef}
-                style={{ position: "relative" }}
-                onClick={() => setDropOpen((v) => !v)}
-              >
-                <div className="tb-avatar">{initials}</div>
-                <div>
-                  <div className="tb-uname">{user.fullName || user.email}</div>
-                  <div className="tb-role" style={{ textTransform: "capitalize" }}>{user.role}</div>
-                </div>
-                <i
-                  className="ti ti-chevron-down"
-                  style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }}
-                />
-
-                {dropOpen && (
-                  <div style={{
-                    position: "absolute", top: "calc(100% + 10px)", right: 0,
-                    background: "#fff", border: "1px solid var(--border)",
-                    borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
-                    minWidth: 180, zIndex: 200, overflow: "hidden",
-                  }}>
-                    <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-dark)" }}>
-                        {user.fullName || user.email}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, textTransform: "capitalize" }}>
-                        {user.role}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setDropOpen(false);
-                        setCpModalOpen(true);
-                      }}
-                      style={{
-                        width: "100%", padding: "11px 16px",
-                        background: "none", border: "none",
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
-                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                    >
-                      <i className="ti ti-key" style={{ fontSize: 16 }} />
-                      Đổi mật khẩu
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      style={{
-                        width: "100%", padding: "11px 16px",
-                        background: "none", border: "none",
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 13, fontWeight: 700, color: "#b42318",
-                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "#fff1f0"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-                    >
-                      <i className="ti ti-logout" style={{ fontSize: 16 }} />
-                      Đăng xuất
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <button className="btn-outline" onClick={() => navigate("/login")}>
-                  Đăng nhập
-                </button>
-                <button className="btn-primary" onClick={() => navigate("/register")}>
-                  Đăng ký
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/staff-dashboard" }, { label: "Dashboard nhân viên" }]} />
 
         {/* Content */}
         <div className="content">
@@ -392,8 +283,8 @@ export default function StaffDashboard() {
                       <td className="td-muted">{p.stock}</td>
                       <td>
                         <span className={`pill ${p.stock === 0 ? "pill-off"
-                            : p.stock < 10 ? "pill-hot"
-                              : "pill-on"
+                          : p.stock < 10 ? "pill-hot"
+                            : "pill-on"
                           }`}>
                           {p.stock === 0 ? "Hết hàng" : p.stock < 10 ? "Sắp hết" : "Còn hàng"}
                         </span>
@@ -407,10 +298,6 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      <ChangePasswordModal 
-        isOpen={cpModalOpen} 
-        onClose={() => setCpModalOpen(false)} 
-      />
     </div>
   );
 }

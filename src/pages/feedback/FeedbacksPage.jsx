@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import { ownerMenuItems } from "../dashboard/Owner";
 import { staffMenuItems } from "../dashboard/Staff";
-import ChangePasswordModal from "../authentication/ChangePasswordModal";
+import Topbar from "../../components/Topbar";
 import feedbackService from "../../services/feedback.service";
 import branchService from "../../services/branch.service";
 import "./FeedbacksPage.css";
@@ -25,16 +25,6 @@ function decodeToken(token) {
   } catch {
     return null;
   }
-}
-
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
 }
 
 function FeedbacksPage() {
@@ -60,9 +50,6 @@ function FeedbacksPage() {
 
   // Layout states
   const [user, setUser] = useState(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const [cpModalOpen, setCpModalOpen] = useState(false);
-  const dropRef = useRef(null);
   const navigate = useNavigate();
 
   const isStaff = user?.role === "staff" || (!user?.role && localStorage.getItem("current_dashboard") === "staff");
@@ -192,16 +179,7 @@ function FeedbacksPage() {
     fetchFeedbacks();
   }, [fetchFeedbacks]);
 
-  // Click outside to close dropdown
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setDropOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   // Auto-hide messages after 5 seconds
   useEffect(() => {
@@ -221,7 +199,6 @@ function FeedbacksPage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
-    setDropOpen(false);
     navigate("/login", { replace: true });
   };
 
@@ -253,6 +230,18 @@ function FeedbacksPage() {
     }
     if (key === "news") {
       navigate("/news");
+      return;
+    }
+    if (key === "facility") {
+      navigate("/branches");
+      return;
+    }
+    if (key === "slot") {
+      navigate("/slots");
+      return;
+    }
+    if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
+      navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard", { state: { activeTab: key } });
       return;
     }
     navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
@@ -361,7 +350,6 @@ function FeedbacksPage() {
     return stars;
   };
 
-  const initials = getInitials(user?.fullName || user?.email || "");
   const isStaffOrOwner = isStaff || isOwner;
   const userRole = user?.role || (isStaff ? "staff" : isOwner ? "owner" : "guest");
   const staffBranchName = user?.branchId?.name || "Chi nhánh của bạn";
@@ -382,65 +370,7 @@ function FeedbacksPage() {
 
       <div className={isStaffOrOwner ? "main" : "public-main-content"} style={isStaffOrOwner ? {} : { maxWidth: 1200, margin: "0 auto", padding: "24px 16px" }}>
         {isStaffOrOwner && (
-          <div className="topbar">
-            <div className="topbar-left">
-              <span className="breadcrumb">Trang chủ&nbsp;/&nbsp;</span>
-              <span className="breadcrumb-active">Đánh giá khách hàng</span>
-            </div>
-            <div className="topbar-right">
-              <div className="tb-user" ref={dropRef} style={{ position: "relative" }} onClick={() => setDropOpen((v) => !v)}>
-                <div className="tb-avatar">{initials}</div>
-                <div>
-                  <div className="tb-uname">{user?.fullName || user?.email}</div>
-                  <div className="tb-role" style={{ textTransform: "capitalize" }}>{user?.role}</div>
-                </div>
-                <i className="ti ti-chevron-down" style={{ fontSize: 14, color: "var(--text-muted)", marginLeft: 4 }} />
-
-                {dropOpen && (
-                  <div className="feedbacks-user-menu" style={{
-                    position: "absolute", top: "calc(100% + 10px)", right: 0,
-                    background: "#fff", border: "1px solid var(--border)",
-                    borderRadius: 12, boxShadow: "0 8px 32px rgba(16,42,67,.12)",
-                    minWidth: 180, zIndex: 200, overflow: "hidden",
-                  }}>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setDropOpen(false);
-                        setCpModalOpen(true);
-                      }}
-                      style={{
-                        width: "100%", padding: "11px 16px",
-                        background: "none", border: "none",
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 13, fontWeight: 700, color: "var(--text-dark)",
-                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                      }}
-                    >
-                      <i className="ti ti-key" />
-                      Đổi mật khẩu
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      style={{
-                        width: "100%", padding: "11px 16px",
-                        background: "none", border: "none",
-                        display: "flex", alignItems: "center", gap: 8,
-                        fontSize: 13, fontWeight: 700, color: "#b42318",
-                        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                        borderTop: "1px solid var(--border-light)"
-                      }}
-                    >
-                      <i className="ti ti-logout" />
-                      Đăng xuất
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <Topbar breadcrumbs={[{ label: "Trang chủ", link: isStaff ? "/staff-dashboard" : "/owner-dashboard" }, { label: "Đánh giá khách hàng" }]} />
         )}
 
         <div className="content">
@@ -783,7 +713,6 @@ function FeedbacksPage() {
         </div>
       )}
 
-      <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
     </div>
   );
 }
