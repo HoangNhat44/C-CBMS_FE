@@ -76,7 +76,7 @@ export default function Header() {
           <Link to="/landing-dashboard" className={`nav-link ${currentPath === "/landing-dashboard" ? "active" : ""}`}>Trang chủ</Link>
           <Link to="/booking" className={`nav-link ${currentPath === "/booking" ? "active" : ""}`}>Đặt Phòng</Link>
           <Link to="/bookinghistory" className={`nav-link ${currentPath === "/bookinghistory" ? "active" : ""}`}>Lịch sử đặt phòng</Link>
-          <a href="#" className="nav-link">Bảng tin</a>
+          <Link to="/public-news" className={`nav-link ${currentPath === "/public-news" ? "active" : ""}`}>Bảng tin</Link>
           <Link to="/feedbacks" className={`nav-link ${currentPath === "/feedbacks" ? "active" : ""}`}>Đánh giá</Link>
         </div>
 
