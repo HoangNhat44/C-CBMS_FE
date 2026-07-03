@@ -5,6 +5,7 @@ import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import UserList from "../account/UserList";
 import userAPI from "../../services/user.service";
+import roleAPI from "../../services/role.service";
 
 /* ── Sidebar menu ── */
 const menuItems = [
@@ -119,7 +120,11 @@ function decodeToken(token) {
 
 export default function AdminDashboard() {
   const [active, setActive] = useState("dashboard");
+  const [usersList, setUsersList] = useState([]);
+  const [rolesList, setRolesList] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [activeUsers, setActiveUsers] = useState(0);
+  const [lockedUsers, setLockedUsers] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -133,17 +138,34 @@ export default function AdminDashboard() {
       }
     }
 
-    const fetchTotalUsers = async () => {
+    const fetchAllUsers = async () => {
       try {
         const uRes = await userAPI.getAllUsers();
         if (uRes.data?.success) {
-          setTotalUsers(uRes.data.data.length);
+          const list = uRes.data.data;
+          setUsersList(list);
+          setTotalUsers(list.length);
+          setActiveUsers(list.filter(u => u.isActive).length);
+          setLockedUsers(list.filter(u => !u.isActive).length);
         }
       } catch (err) {
-        console.error("Fetch total users failed", err);
+        console.error("Fetch users failed", err);
       }
     };
-    fetchTotalUsers();
+
+    const fetchAllRoles = async () => {
+      try {
+        const res = await roleAPI.getAllRoles();
+        if (res.data?.success) {
+          setRolesList(res.data.data);
+        }
+      } catch (err) {
+        console.error("Fetch roles failed", err);
+      }
+    };
+
+    fetchAllUsers();
+    fetchAllRoles();
   }, []);
 
 
@@ -190,20 +212,30 @@ export default function AdminDashboard() {
               </div>
 
               <div className="metrics" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                {metrics.map((m) => (
-                  <div className="metric" key={m.label}>
-                    <div className="metric-accent" style={{ background: m.color }} />
-                    <div className="metric-lbl">
-                      <i className={`ti ${m.icon}`} aria-hidden="true" />
-                      {m.label}
-                    </div>
-                    <div className="metric-val">{m.value}</div>
-                    <div className={`metric-trend ${m.up ? "trend-up" : "trend-dn"}`}>
-                      <i className={`ti ${m.up ? "ti-trending-up" : "ti-trending-down"}`} />
-                      {m.trend} so với tháng trước
-                    </div>
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#e11d48" }} />
+                  <div className="metric-lbl">
+                    <i className="ti ti-users" aria-hidden="true" />
+                    Tổng người dùng
                   </div>
-                ))}
+                  <div className="metric-val">{totalUsers}</div>
+                </div>
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#16a34a" }} />
+                  <div className="metric-lbl">
+                    <i className="ti ti-user-check" aria-hidden="true" />
+                    Đang hoạt động
+                  </div>
+                  <div className="metric-val">{activeUsers}</div>
+                </div>
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#f59e0b" }} />
+                  <div className="metric-lbl">
+                    <i className="ti ti-user-x" aria-hidden="true" />
+                    Bị khóa
+                  </div>
+                  <div className="metric-val">{lockedUsers}</div>
+                </div>
               </div>
 
               <div className="row2">
@@ -213,7 +245,6 @@ export default function AdminDashboard() {
                       <i className="ti ti-users" aria-hidden="true" />
                       Danh sách người dùng
                     </div>
-                    <span className="card-more">Xem tất cả</span>
                   </div>
                   <table className="dash-table">
                     <thead>
@@ -222,28 +253,34 @@ export default function AdminDashboard() {
                         <th>Email</th>
                         <th>Vai trò</th>
                         <th>Trạng thái</th>
-                        <th style={{ textAlign: "right" }}>Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((u) => (
-                        <tr key={u.email}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div className="user-av" style={{ background: u.bg, color: u.color, width: 28, height: 28, fontSize: 10 }}>
-                                {u.initials}
+                      {usersList.slice(0, 5).map((u) => {
+                        const roleName = u.roleId?.name || "Customer";
+                        const initials = u.fullName ? u.fullName.substring(0, 2).toUpperCase() : "U";
+                        const bg = u.isActive ? "#dbeafe" : "#fee2e2";
+                        const color = u.isActive ? "#1d4ed8" : "#b91c1c";
+                        const statusPill = u.isActive ? "pill-on" : "pill-off";
+                        const statusText = u.isActive ? "Hoạt động" : "Bị khóa";
+                        const roleP = rolePill[roleName] || "pill-blue";
+
+                        return (
+                          <tr key={u._id}>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div className="user-av" style={{ background: bg, color: color, width: 28, height: 28, fontSize: 10 }}>
+                                  {initials}
+                                </div>
+                                {u.fullName}
                               </div>
-                              {u.name}
-                            </div>
-                          </td>
-                          <td className="td-muted">{u.email}</td>
-                          <td><span className={`pill ${rolePill[u.role]}`}>{u.role}</span></td>
-                          <td><span className={`pill ${pillMap[u.status]}`}>{u.statusText}</span></td>
-                          <td style={{ textAlign: "right" }}>
-                            <span style={{ fontSize: 13, color: "var(--text-faint)", fontStyle: "italic" }}>Demo</span>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="td-muted">{u.email}</td>
+                            <td><span className={`pill ${roleP}`}>{roleName}</span></td>
+                            <td><span className={`pill ${statusPill}`}>{statusText}</span></td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -251,36 +288,44 @@ export default function AdminDashboard() {
                 <div className="card">
                   <div className="card-head">
                     <div className="card-title">
-                      <i className="ti ti-report-analytics" aria-hidden="true" />
-                      Nhật ký hoạt động
+                      <i className="ti ti-user-x" aria-hidden="true" />
+                      Tài khoản bị khóa
                     </div>
-                    <span className="card-more">Xem tất cả</span>
+                   
                   </div>
-                  {activityLogs.map((log, idx) => (
-                    <div className="user-row" key={idx}>
-                      <div
-                        className="user-av"
-                        style={{
-                          background: log.type === "warn" ? "#fef3c7" : "#dbeafe",
-                          color: log.type === "warn" ? "#92400e" : "#1d4ed8",
-                          width: 32, height: 32, fontSize: 12,
-                        }}
-                      >
-                        <i className={`ti ${log.type === "warn" ? "ti-alert-triangle" : "ti-activity"}`} style={{ fontSize: 14 }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="user-name">
-                          {log.action}
-                        </div>
-                        <div className="user-meta">
-                          {log.user} · {log.time}
-                        </div>
-                      </div>
-                      <span className={`pill ${log.type === "warn" ? "pill-warn" : "pill-blue"}`}>
-                        {log.type === "warn" ? "Cảnh báo" : "Thông tin"}
-                      </span>
+                  {usersList.filter(u => !u.isActive).length === 0 ? (
+                    <div style={{
+                      textAlign: "center", padding: "32px 0",
+                      color: "var(--text-faint)", fontSize: 13, fontWeight: 600,
+                    }}>
+                      <i className="ti ti-mood-smile" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />
+                      Không có tài khoản bị khóa
                     </div>
-                  ))}
+                  ) : (
+                    usersList.filter(u => !u.isActive).map((u) => {
+                      const initials = u.fullName ? u.fullName.substring(0, 2).toUpperCase() : "U";
+                      const bg = "#fee2e2";
+                      const color = "#b91c1c";
+                      const joinDate = new Date(u.createdAt).toLocaleDateString("vi-VN");
+                      return (
+                        <div className="user-row" key={u._id}>
+                          <div className="user-av" style={{ background: bg, color: color }}>
+                            {initials}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="user-name">{u.fullName}</div>
+                            <div className="user-meta">{u.email} · Tham gia {joinDate}</div>
+                          </div>
+                          <button
+                            className="pill pill-on"
+                            style={{ cursor: "pointer", border: "none", fontFamily: "inherit" }}
+                          >
+                            Mở khóa
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -291,7 +336,6 @@ export default function AdminDashboard() {
                       <i className="ti ti-shield-lock" aria-hidden="true" />
                       Vai trò hệ thống
                     </div>
-                    <span className="card-more">Thêm vai trò</span>
                   </div>
                   <table className="dash-table">
                     <thead>
@@ -299,38 +343,43 @@ export default function AdminDashboard() {
                         <th>Vai trò</th>
                         <th>Mô tả</th>
                         <th>Người dùng</th>
-                        <th>Quyền</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {roles.map((r) => (
-                        <tr key={r.name}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div
-                                style={{
-                                  width: 8, height: 8, borderRadius: "50%",
-                                  background: r.color, flexShrink: 0,
-                                }}
-                              />
-                              <span style={{ fontWeight: 800 }}>{r.name}</span>
-                            </div>
-                          </td>
-                          <td className="td-muted">{r.desc}</td>
-                          <td>
-                            <span className="stat-chip">
-                              <i className="ti ti-users" style={{ fontSize: 12 }} />
-                              {r.userCount}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="stat-chip">
-                              <i className="ti ti-lock" style={{ fontSize: 12 }} />
-                              {r.permissions}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {rolesList.concat([{ name: "guest", description: "Xem trang công khai và đặt phòng", _id: "guest-mock" }]).map((r) => {
+                        const nameDisplay = r.name.charAt(0).toUpperCase() + r.name.slice(1);
+                        const roleColor = { admin: "#e11d48", owner: "#16a34a", staff: "#4f8ef7", customer: "#f59e0b", user: "#f59e0b" }[r.name] || "#9ca3af";
+
+                        let uCount = 0;
+                        if (r.name !== "guest") {
+                          uCount = usersList.filter(u => u.roleId?._id === r._id || (u.roleId?.name || "").toLowerCase() === r.name).length;
+                        }
+
+                        return (
+                          <tr key={r.name}>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div
+                                  style={{
+                                    width: 8, height: 8, borderRadius: "50%",
+                                    background: roleColor, flexShrink: 0,
+                                  }}
+                                />
+                                <span style={{ fontWeight: 800 }}>{nameDisplay}</span>
+                              </div>
+                            </td>
+                            <td className="td-muted">{r.description || (r.name === "guest" ? "Xem trang công khai và đặt phòng" : "Chưa có mô tả")}</td>
+                            <td>
+                              {r.name === "guest" ? null : (
+                                <span className="stat-chip">
+                                  <i className="ti ti-users" style={{ fontSize: 12 }} />
+                                  {uCount}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -384,66 +433,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="row2">
-                <div className="card">
-                  <div className="card-head">
-                    <div className="card-title">
-                      <i className="ti ti-chart-bar" aria-hidden="true" />
-                      Phân bổ người dùng theo vai trò
-                    </div>
-                  </div>
-                  {roles.filter(r => r.userCount > 0).map((r) => {
-                    const maxCount = Math.max(...roles.map(x => x.userCount));
-                    const pct = Math.round((r.userCount / maxCount) * 100);
-                    return (
-                      <div className="bar-row" key={r.name}>
-                        <div className="bar-lbl">{r.name}</div>
-                        <div className="bar-track">
-                          <div className="bar-fill" style={{ width: `${pct}%`, background: r.color }} />
-                        </div>
-                        <div className="bar-val">{r.userCount}</div>
-                      </div>
-                    );
-                  })}
-                </div>
 
-                <div className="card">
-                  <div className="card-head">
-                    <div className="card-title">
-                      <i className="ti ti-user-x" aria-hidden="true" />
-                      Tài khoản bị khóa
-                    </div>
-                    <span className="card-more">Quản lý</span>
-                  </div>
-                  {users.filter(u => u.status === "off").length === 0 ? (
-                    <div style={{
-                      textAlign: "center", padding: "32px 0",
-                      color: "var(--text-faint)", fontSize: 13, fontWeight: 600,
-                    }}>
-                      <i className="ti ti-mood-smile" style={{ fontSize: 28, display: "block", marginBottom: 8 }} />
-                      Không có tài khoản bị khóa
-                    </div>
-                  ) : (
-                    users.filter(u => u.status === "off").map((u) => (
-                      <div className="user-row" key={u.email}>
-                        <div className="user-av" style={{ background: u.bg, color: u.color }}>
-                          {u.initials}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="user-name">{u.name}</div>
-                          <div className="user-meta">{u.email} · Tham gia {u.joinDate}</div>
-                        </div>
-                        <button
-                          className="pill pill-on"
-                          style={{ cursor: "pointer", border: "none", fontFamily: "inherit" }}
-                        >
-                          Mở khóa
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
             </>
           )}
         </div>

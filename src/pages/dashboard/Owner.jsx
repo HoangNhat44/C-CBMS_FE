@@ -4,6 +4,11 @@ import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import PromotionList from "../promotion/PromotionList";
+import userAPI from "../../services/user.service";
+import bookingAPI from "../../services/booking.service";
+import feedbackAPI from "../../services/feedback.service";
+import branchAPI from "../../services/branch.service";
+import promotionAPI from "../../services/promotion.service";
 
 export const ownerMenuItems = [
   {
@@ -50,42 +55,12 @@ export const ownerMenuItems = [
 
 const metrics = [
   { icon: "ti-coin", label: "Doanh thu", value: "84.2M", trend: "+12%", up: true, color: "#4f8ef7" },
-  { icon: "ti-calendar-check", label: "Đặt chỗ", value: "1,304", trend: "+8%", up: true, color: "#16a34a" },
-  { icon: "ti-users", label: "Khách hàng", value: "528", trend: "−3%", up: false, color: "#f59e0b" },
   { icon: "ti-star", label: "Đánh giá TB", value: "4.6", trend: "+0.2", up: true, color: "#8b5cf6" },
 ];
 
-const revenueByRoom = [
-  { label: "Phòng A", pct: 85, val: "21.4M" },
-  { label: "Phòng B", pct: 70, val: "17.6M" },
-  { label: "Phòng C", pct: 55, val: "13.8M" },
-  { label: "Phòng D", pct: 42, val: "10.5M" },
-  { label: "Khác", pct: 28, val: "7.2M" },
-];
 
-const reviews = [
-  { initials: "TL", name: "Trần Thị Lan", stars: 5, text: "Không gian rất đẹp, nhân viên nhiệt tình!", bg: "#dbeafe", color: "#1d4ed8" },
-  { initials: "PH", name: "Phạm Văn Hùng", stars: 4, text: "Đồ uống ngon, slot hợp lý, chỗ đậu hơi xa.", bg: "#dcfce7", color: "#15803d" },
-  { initials: "NM", name: "Nguyễn Minh", stars: 3, text: "Dịch vụ ổn nhưng phải chờ xác nhận khá lâu.", bg: "#fee2e2", color: "#b91c1c" },
-];
 
-const promos = [
-  { name: "Khai trương giảm 20%", status: "on", label: "Đang chạy" },
-  { name: "Happy hour 17–19h", status: "on", label: "Đang chạy" },
-  { name: "Flash sale cuối tuần", status: "hot", label: "Sắp hết" },
-  { name: "Combo cặp đôi", status: "off", label: "Đã hết" },
-];
 
-const slots = [
-  { time: "08:00–10:00", pct: 100, count: "8/8", type: "full" },
-  { time: "10:00–12:00", pct: 75, count: "6/8", type: "full" },
-  { time: "13:00–15:00", pct: 50, count: "4/8", type: "mid" },
-  { time: "15:00–17:00", pct: 25, count: "2/8", type: "low" },
-  { time: "19:00–21:00", pct: 88, count: "7/8", type: "full" },
-];
-
-const slotColor = { full: "#16a34a", mid: "#f59e0b", low: "#ef4444" };
-const pillClass = { on: "pill-on", hot: "pill-hot", off: "pill-off" };
 
 // Decode JWT payload (không cần verify, chỉ lấy thông tin hiển thị)
 function decodeToken(token) {
@@ -100,6 +75,12 @@ function decodeToken(token) {
 
 export default function OwnerDashboard() {
   const [active, setActive] = useState("revenue");
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [revenueByBranch, setRevenueByBranch] = useState([]);
+  const [feedbacksList, setFeedbacksList] = useState([]);
+  const [promotionsList, setPromotionsList] = useState([]);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -121,6 +102,97 @@ export default function OwnerDashboard() {
         localStorage.removeItem("token");
       }
     }
+
+    const fetchCustomers = async () => {
+      try {
+        const uRes = await userAPI.getAllUsers();
+        if (uRes.data?.success) {
+          const list = uRes.data.data;
+          const customers = list.filter(u => !u.roleId || (u.roleId.name !== "Admin" && u.roleId.name !== "Staff" && u.roleId.name !== "Owner"));
+          setTotalCustomers(customers.length);
+        }
+      } catch (err) {
+        console.error("Fetch customers failed", err);
+      }
+    };
+
+    const fetchRevenue = async () => {
+      try {
+        const [bRes, brRes] = await Promise.all([
+          bookingAPI.getAllBookings(),
+          branchAPI.getAllBranches()
+        ]);
+        
+        let branches = [];
+        if (brRes.data?.success) {
+           branches = brRes.data.data;
+        }
+
+        if (bRes.data?.success) {
+          const bookings = bRes.data.data;
+          
+          let total = 0;
+          const branchMap = {};
+          
+          bookings.forEach((b) => {
+            if (b.status === "completed" || b.status === "confirmed") {
+              const amount = b.finalTotal || 0;
+              total += amount;
+              
+              const bId = typeof b.branchId === "object" ? b.branchId?._id : b.branchId;
+              if (bId) {
+                if (!branchMap[bId]) branchMap[bId] = 0;
+                branchMap[bId] += amount;
+              }
+            }
+          });
+          setTotalRevenue(total);
+          
+          const revenueList = branches.map(br => ({
+             name: br.name,
+             val: branchMap[br._id] || 0
+          })).sort((a, b) => b.val - a.val);
+          
+          setRevenueByBranch(revenueList);
+        }
+      } catch (err) {
+        console.error("Fetch revenue failed", err);
+      }
+    };
+
+    const fetchFeedbacks = async () => {
+      try {
+        const fRes = await feedbackAPI.getAllFeedbacks();
+        if (fRes.data?.success) {
+          const feedbacks = fRes.data.data;
+          setFeedbacksList(feedbacks);
+          if (feedbacks.length > 0) {
+            const sum = feedbacks.reduce((acc, f) => acc + (f.rating || 0), 0);
+            setAverageRating((sum / feedbacks.length).toFixed(1));
+          } else {
+            setAverageRating(0);
+          }
+        }
+      } catch (err) {
+        console.error("Fetch feedbacks failed", err);
+      }
+    };
+
+    const fetchPromotions = async () => {
+      try {
+        const pRes = await promotionAPI.getAllPromotions();
+        if (pRes.success) {
+          setPromotionsList(pRes.data);
+        }
+      } catch (err) {
+        console.error("Fetch promotions failed", err);
+      }
+    };
+
+    fetchCustomers();
+    fetchRevenue();
+    fetchFeedbacks();
+    fetchPromotions();
   }, []);
 
 
@@ -195,7 +267,7 @@ export default function OwnerDashboard() {
               </div>
 
               {/* Metrics */}
-              <div className="metrics">
+              <div className="metrics" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
                 {metrics.map((m) => (
                   <div className="metric" key={m.label}>
                     <div className="metric-accent" style={{ background: m.color }} />
@@ -203,10 +275,12 @@ export default function OwnerDashboard() {
                       <i className={`ti ${m.icon}`} aria-hidden="true" />
                       {m.label}
                     </div>
-                    <div className="metric-val">{m.value}</div>
-                    <div className={`metric-trend ${m.up ? "trend-up" : "trend-dn"}`}>
-                      <i className={`ti ${m.up ? "ti-trending-up" : "ti-trending-down"}`} />
-                      {m.trend} so với tháng trước
+                    <div className="metric-val">
+                      {m.label === "Doanh thu"
+                        ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalRevenue)
+                        : m.label === "Đánh giá TB"
+                        ? averageRating
+                        : m.value}
                     </div>
                   </div>
                 ))}
@@ -217,20 +291,23 @@ export default function OwnerDashboard() {
                 <div className="card">
                   <div className="card-head">
                     <div className="card-title">
-                      <i className="ti ti-chart-bar" aria-hidden="true" />
-                      Doanh thu theo phòng
+                      <i className="ti ti-building" aria-hidden="true" />
+                      Doanh thu theo cơ sở
                     </div>
-                    <span className="card-more">Xem thêm</span>
                   </div>
-                  {revenueByRoom.map((r) => (
-                    <div className="bar-row" key={r.label}>
-                      <div className="bar-lbl">{r.label}</div>
-                      <div className="bar-track">
-                        <div className="bar-fill" style={{ width: `${r.pct}%` }} />
+                  {revenueByBranch.map((r) => (
+                    <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ fontWeight: 600, color: "var(--text-main)" }}>{r.name}</div>
+                      <div style={{ fontWeight: 700, color: "#16a34a" }}>
+                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(r.val)}
                       </div>
-                      <div className="bar-val">{r.val}</div>
                     </div>
                   ))}
+                  {revenueByBranch.length === 0 && (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)" }}>
+                      Chưa có dữ liệu
+                    </div>
+                  )}
                 </div>
 
                 <div className="card">
@@ -239,67 +316,36 @@ export default function OwnerDashboard() {
                       <i className="ti ti-star" aria-hidden="true" />
                       Đánh giá gần đây
                     </div>
-                    <span className="card-more">Xem tất cả</span>
                   </div>
-                  {reviews.map((r) => (
-                    <div className="rv-item" key={r.name}>
-                      <div className="rv-av" style={{ background: r.bg, color: r.color }}>
-                        {r.initials}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="rv-name">
-                          {r.name}{" "}
-                          <span className="rv-stars" style={{ color: r.stars < 4 ? "#94a3b8" : "#f59e0b" }}>
-                            {"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}
-                          </span>
+                  {feedbacksList.slice(0, 5).map((r) => {
+                    const name = r.customerId?.fullName || "Khách hàng";
+                    const initials = name.substring(0, 2).toUpperCase();
+                    return (
+                      <div className="rv-item" key={r._id}>
+                        <div className="rv-av" style={{ background: "#dbeafe", color: "#1d4ed8" }}>
+                          {initials}
                         </div>
-                        <div className="rv-text">{r.text}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="rv-name">
+                            {name}{" "}
+                            <span className="rv-stars" style={{ color: r.rating < 4 ? "#94a3b8" : "#f59e0b" }}>
+                              {"★".repeat(r.rating || 5)}{"☆".repeat(5 - (r.rating || 5))}
+                            </span>
+                          </div>
+                          <div className="rv-text">{r.comment || "Không có nội dung"}</div>
+                        </div>
                       </div>
+                    );
+                  })}
+                  {feedbacksList.length === 0 && (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)" }}>
+                      Chưa có đánh giá nào
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
-              {/* Row 3 */}
-              <div className="row2">
-                <div className="card">
-                  <div className="card-head">
-                    <div className="card-title">
-                      <i className="ti ti-ticket" aria-hidden="true" />
-                      Khuyến mãi đang chạy
-                    </div>
-                    <span className="card-more">Quản lý</span>
-                  </div>
-                  {promos.map((p) => (
-                    <div className="promo-row" key={p.name}>
-                      <span className="promo-name">{p.name}</span>
-                      <span className={`pill ${pillClass[p.status]}`}>{p.label}</span>
-                    </div>
-                  ))}
-                </div>
 
-                <div className="card">
-                  <div className="card-head">
-                    <div className="card-title">
-                      <i className="ti ti-clock" aria-hidden="true" />
-                      Slot hôm nay
-                    </div>
-                    <span className="card-more">Xem lịch</span>
-                  </div>
-                  {slots.map((s) => (
-                    <div className="slot-row" key={s.time}>
-                      <div className="slot-time">{s.time}</div>
-                      <div className="slot-bar-track">
-                        <div
-                          className="slot-fill"
-                          style={{ width: `${s.pct}%`, background: slotColor[s.type] }}
-                        />
-                      </div>
-                      <div className="slot-count">{s.count}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
         </div>

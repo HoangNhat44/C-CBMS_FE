@@ -33,7 +33,7 @@ function App() {
         <Route path="/bookinghistory" element={<BookingHistoryPage />} />
         <Route path="/booking/:id" element={<BookingDetailPage />} />
         <Route path="*" element={<Navigate to="/booking" replace />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/landing-dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

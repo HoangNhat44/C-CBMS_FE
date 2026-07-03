@@ -3,8 +3,17 @@ import { useNavigate } from "react-router-dom";
 import "./Dashboard.css"; // đường dẫn tuỳ cấu trúc project
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
+import userAPI from "../../services/user.service";
+import roomAPI from "../../services/room.service";
+import bookingAPI from "../../services/booking.service";
 
 export const staffMenuItems = [
+  {
+    section: "Tổng quan",
+    items: [
+      { icon: "ti-chart-bar", label: "Dashboard", key: "dashboard" },
+    ],
+  },
   {
     section: "Quản lý",
     items: [
@@ -35,45 +44,9 @@ export const staffMenuItems = [
   },
 ];
 
-const metrics = [
-  { icon: "ti-calendar-check", label: "Đặt phòng hôm nay", value: "24", trend: "+4", up: true, color: "#2563eb" },
-  { icon: "ti-users", label: "Khách đang ở", value: "11", trend: "+2", up: true, color: "#0f766e" },
-  { icon: "ti-package", label: "Sản phẩm tồn kho", value: "138", trend: "−12", up: false, color: "#f59e0b" },
-  { icon: "ti-door", label: "Phòng trống", value: "6/14", trend: "ổn định", up: true, color: "#8b5cf6" },
-];
 
-const recentBookings = [
-  { name: "Nguyễn Văn An", room: "Phòng A3", time: "09:00–11:00", status: "on", statusText: "Đang ở" },
-  { name: "Trần Thị Bích", room: "Phòng B1", time: "10:00–12:00", status: "on", statusText: "Đang ở" },
-  { name: "Lê Hoàng Nam", room: "Phòng C2", time: "13:00–15:00", status: "blue", statusText: "Sắp tới" },
-  { name: "Phạm Ngọc Ánh", room: "Phòng A1", time: "14:00–16:00", status: "blue", statusText: "Sắp tới" },
-  { name: "Vũ Đình Khải", room: "Phòng B3", time: "08:00–09:00", status: "off", statusText: "Đã xong" },
-];
 
-const customers = [
-  { initials: "NA", name: "Nguyễn Văn An", meta: "0912 345 678 · 8 lần đặt", bg: "#dbeafe", color: "#1d4ed8" },
-  { initials: "TB", name: "Trần Thị Bích", meta: "0934 567 890 · 5 lần đặt", bg: "#dcfce7", color: "#15803d" },
-  { initials: "LN", name: "Lê Hoàng Nam", meta: "0976 234 567 · 12 lần đặt", bg: "#ede9fe", color: "#5b21b6" },
-  { initials: "PA", name: "Phạm Ngọc Ánh", meta: "0901 123 456 · 3 lần đặt", bg: "#fef3c7", color: "#92400e" },
-];
 
-const rooms = [
-  { name: "Phòng A1", type: "VIP", capacity: 4, status: "on", statusText: "Trống" },
-  { name: "Phòng A3", type: "VIP", capacity: 4, status: "hot", statusText: "Đang dùng" },
-  { name: "Phòng B1", type: "Thường", capacity: 6, status: "hot", statusText: "Đang dùng" },
-  { name: "Phòng B3", type: "Thường", capacity: 6, status: "on", statusText: "Trống" },
-  { name: "Phòng C2", type: "Premium", capacity: 8, status: "blue", statusText: "Sắp tới" },
-];
-
-const products = [
-  { name: "Cà phê sữa đá", category: "Đồ uống", stock: 48, status: "on" },
-  { name: "Matcha Latte", category: "Đồ uống", stock: 22, status: "on" },
-  { name: "Bánh tiramisu", category: "Bánh", stock: 6, status: "hot" },
-  { name: "Nước cam ép", category: "Đồ uống", stock: 0, status: "off" },
-  { name: "Combo cặp đôi", category: "Combo", stock: 14, status: "on" },
-];
-
-const pillMap = { on: "pill-on", hot: "pill-hot", off: "pill-off", blue: "pill-blue", warn: "pill-warn" };
 
 // Decode JWT payload (không cần verify, chỉ lấy thông tin hiển thị)
 function decodeToken(token) {
@@ -86,7 +59,10 @@ function decodeToken(token) {
 }
 
 export default function StaffDashboard() {
-  const [active, setActive] = useState("category");
+  const [active, setActive] = useState("dashboard");
+  const [customersList, setCustomersList] = useState([]);
+  const [roomsList, setRoomsList] = useState([]);
+  const [activeBookings, setActiveBookings] = useState(0);
   const navigate = useNavigate();
 
 
@@ -103,6 +79,74 @@ export default function StaffDashboard() {
         localStorage.removeItem("token");
       }
     }
+
+    const fetchCustomers = async () => {
+      try {
+        const uRes = await userAPI.getAllUsers();
+        if (uRes.data?.success) {
+          const list = uRes.data.data;
+          const customers = list.filter(u => !u.roleId || (u.roleId.name !== "Admin" && u.roleId.name !== "Staff" && u.roleId.name !== "Owner"));
+          setCustomersList(customers.slice(0, 5));
+        }
+      } catch (err) {
+        console.error("Fetch customers failed", err);
+      }
+    };
+
+    const fetchRooms = async () => {
+      try {
+        const rRes = await roomAPI.getAllRooms();
+        if (rRes.success) {
+          setRoomsList(rRes.data || []);
+        }
+      } catch (err) {
+        console.error("Fetch rooms failed", err);
+      }
+    };
+
+    const fetchBookings = async () => {
+      try {
+        const bRes = await bookingAPI.getAllBookings();
+        if (bRes.data?.success) {
+          const bookings = bRes.data.data || [];
+          const active = bookings.filter(b => {
+            if (b.status !== "confirmed") return false;
+            const today = new Date();
+            const bDate = new Date(b.bookingDate);
+            if (
+              today.getFullYear() === bDate.getFullYear() &&
+              today.getMonth() === bDate.getMonth() &&
+              today.getDate() === bDate.getDate()
+            ) {
+              const currentHours = today.getHours();
+              const currentMinutes = today.getMinutes();
+              const currentTime = currentHours + currentMinutes / 60;
+
+              const parseTime = (timeStr) => {
+                if (!timeStr) return 0;
+                const parts = timeStr.split(":");
+                return parseInt(parts[0]) + (parseInt(parts[1] || 0) / 60);
+              };
+
+              const start = parseTime(b.startTime);
+              const end = parseTime(b.endTime);
+
+              if (currentTime >= start && currentTime <= end) {
+                return true;
+              }
+            }
+            return false;
+          }).length;
+          setActiveBookings(active);
+        }
+      } catch (err) {
+        console.error("Fetch bookings failed", err);
+      }
+    };
+
+    fetchCustomers();
+    fetchRooms();
+    fetchBookings();
   }, []);
 
 
@@ -157,84 +201,67 @@ export default function StaffDashboard() {
             <div className="pg-sub">Tổng quan ca làm việc hôm nay · Thứ Hai, 16/06/2025</div>
           </div>
 
-          <div className="metrics">
-            {metrics.map((m) => (
-              <div className="metric" key={m.label}>
-                <div className="metric-accent" style={{ background: m.color }} />
-                <div className="metric-lbl">
-                  <i className={`ti ${m.icon}`} aria-hidden="true" />
-                  {m.label}
-                </div>
-                <div className="metric-val">{m.value}</div>
-                <div className={`metric-trend ${m.up ? "trend-up" : "trend-dn"}`}>
-                  <i className={`ti ${m.up ? "ti-trending-up" : "ti-trending-down"}`} />
-                  {m.trend} so với hôm qua
-                </div>
+          <div className="metrics" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+            <div className="metric">
+              <div className="metric-accent" style={{ background: "#0f766e" }} />
+              <div className="metric-lbl">
+                <i className="ti ti-users" aria-hidden="true" />
+                Khách đang ở
               </div>
-            ))}
+              <div className="metric-val">{activeBookings}</div>
+            </div>
+            <div className="metric">
+              <div className="metric-accent" style={{ background: "#8b5cf6" }} />
+              <div className="metric-lbl">
+                <i className="ti ti-door" aria-hidden="true" />
+                Phòng trống
+              </div>
+              <div className="metric-val">
+                {roomsList.filter(r => r.status === "available").length}/{roomsList.length}
+              </div>
+            </div>
           </div>
 
-          <div className="row2">
-            <div className="card">
-              <div className="card-head">
-                <div className="card-title">
-                  <i className="ti ti-calendar-check" aria-hidden="true" />
-                  Đặt phòng hôm nay
-                </div>
-                <span className="card-more">Xem tất cả</span>
-              </div>
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>Khách</th>
-                    <th>Phòng</th>
-                    <th>Giờ</th>
-                    <th>Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentBookings.map((b) => (
-                    <tr key={b.name + b.time}>
-                      <td>{b.name}</td>
-                      <td className="td-muted">{b.room}</td>
-                      <td className="td-muted">{b.time}</td>
-                      <td><span className={`pill ${pillMap[b.status]}`}>{b.statusText}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
+
+          <div className="row2">
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
                   <i className="ti ti-users" aria-hidden="true" />
                   Khách hàng gần đây
                 </div>
-                <span className="card-more">Xem tất cả</span>
               </div>
-              {customers.map((c) => (
-                <div className="user-row" key={c.name}>
-                  <div className="user-av" style={{ background: c.bg, color: c.color }}>
-                    {c.initials}
+              {customersList.map((c) => {
+                const initials = c.fullName ? c.fullName.substring(0, 2).toUpperCase() : "U";
+                const bg = "#dbeafe";
+                const color = "#1d4ed8";
+                const meta = c.email || c.phone || "Khách hàng";
+                return (
+                  <div className="user-row" key={c._id}>
+                    <div className="user-av" style={{ background: bg, color: color }}>
+                      {initials}
+                    </div>
+                    <div>
+                      <div className="user-name">{c.fullName}</div>
+                      <div className="user-meta">{meta}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="user-name">{c.name}</div>
-                    <div className="user-meta">{c.meta}</div>
-                  </div>
+                );
+              })}
+              {customersList.length === 0 && (
+                <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)" }}>
+                  Chưa có khách hàng nào
                 </div>
-              ))}
+              )}
             </div>
-          </div>
 
-          <div className="row2">
             <div className="card">
               <div className="card-head">
                 <div className="card-title">
                   <i className="ti ti-building-estate" aria-hidden="true" />
                   Danh sách phòng
                 </div>
-                <span className="card-more">Quản lý</span>
               </div>
               <table className="dash-table">
                 <thead>
@@ -246,54 +273,37 @@ export default function StaffDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rooms.map((r) => (
-                    <tr key={r.name}>
-                      <td>{r.name}</td>
-                      <td className="td-muted">{r.type}</td>
+                  {roomsList.slice(0, 5).map((r) => {
+                    let statusText = "Trống";
+                    let pillType = "pill-on";
+                    if (r.status === "maintenance") {
+                      statusText = "Bảo trì";
+                      pillType = "pill-warn";
+                    } else if (r.status === "inactive") {
+                      statusText = "Ngưng HĐ";
+                      pillType = "pill-off";
+                    }
+                    return (
+                    <tr key={r._id}>
+                      <td>{r.roomName}</td>
+                      <td className="td-muted">{r.roomTypeId?.typeName || r.roomTypeId?.name || "Loại phòng"}</td>
                       <td className="td-muted">{r.capacity} người</td>
-                      <td><span className={`pill ${pillMap[r.status]}`}>{r.statusText}</span></td>
+                      <td><span className={`pill ${pillType}`}>{statusText}</span></td>
                     </tr>
-                  ))}
+                    );
+                  })}
+                  {roomsList.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)" }}>
+                        Chưa có dữ liệu phòng
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
 
-            <div className="card">
-              <div className="card-head">
-                <div className="card-title">
-                  <i className="ti ti-package" aria-hidden="true" />
-                  Sản phẩm tồn kho
-                </div>
-                <span className="card-more">Quản lý</span>
-              </div>
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>Tên</th>
-                    <th>Danh mục</th>
-                    <th>Tồn</th>
-                    <th>Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => (
-                    <tr key={p.name}>
-                      <td>{p.name}</td>
-                      <td className="td-muted">{p.category}</td>
-                      <td className="td-muted">{p.stock}</td>
-                      <td>
-                        <span className={`pill ${p.stock === 0 ? "pill-off"
-                          : p.stock < 10 ? "pill-hot"
-                            : "pill-on"
-                          }`}>
-                          {p.stock === 0 ? "Hết hàng" : p.stock < 10 ? "Sắp hết" : "Còn hàng"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+
           </div>
         </div>
       </div>
