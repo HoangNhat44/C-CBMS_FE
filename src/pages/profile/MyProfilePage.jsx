@@ -326,7 +326,7 @@ export default function MyProfilePage() {
 
   // Render Customer/Public Layout with Header
   return (
-    <>
+    <div className="lp">
       <Header />
       <div className="public-profile-container">
         <header>
@@ -348,6 +348,6 @@ export default function MyProfilePage() {
         </div>
       </div>
       <ChangePasswordModal isOpen={cpModalOpen} onClose={() => setCpModalOpen(false)} />
-    </>
+    </div>
   );
 }

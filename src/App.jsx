@@ -23,6 +23,7 @@ import FeedbacksPage from "./pages/feedback/FeedbacksPage";
 import BranchesPage from "./pages/branch/BranchesPage";
 import SlotsPage from "./pages/slot/SlotsPage";
 import MyProfilePage from "./pages/profile/MyProfilePage";
+import PublicNewsPage from "./pages/news/PublicNewsPage";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
         <Route path="/branches" element={<BranchesPage />} />
         <Route path="/slots" element={<SlotsPage />} />
         <Route path="/profile" element={<MyProfilePage />} />
+        <Route path="/public-news" element={<PublicNewsPage />} />
       </Routes>
     </BrowserRouter>
   );
