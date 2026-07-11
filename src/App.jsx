@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 import "./App.css";
 import BookingPage from "./pages/booking/BookingPage";
 import WalkinBookingPage from "./pages/booking/WalkinBookingPage";
@@ -25,38 +26,76 @@ import SlotsPage from "./pages/slot/SlotsPage";
 import MyProfilePage from "./pages/profile/MyProfilePage";
 import PublicNewsPage from "./pages/news/PublicNewsPage";
 
+import ProtectedRoute from "./components/ProtectedRoute";
+import RolePermission from "./pages/account/RolePermission";
+import AccessDeniedPage from "./pages/error/AccessDeniedPage";
+
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/booking" element={<BookingPage />} />
-        <Route path="/walkin" element={<WalkinBookingPage />} />
-        <Route path="/bookinghistory" element={<BookingHistoryPage />} />
-        <Route path="/booking/:id" element={<BookingDetailPage />} />
-        <Route path="*" element={<Navigate to="/booking" replace />} />
-        <Route path="/" element={<Navigate to="/landing-dashboard" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/users" element={<UserList />} />
-        <Route path="/owner-dashboard" element={<OwnerDashboard />} />
-        <Route path="/staff-dashboard" element={<StaffDashboard />} />
-        <Route path="/landing-dashboard" element={<LandingPage />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/apply-promotion" element={<ApplyPromotion />} />
-        <Route path="/room" element={<RoomPage />} />
-        <Route path="/news" element={<NewsPage />} />
-        <Route path="/roomtype" element={<RoomTypePage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/feedbacks" element={<FeedbacksPage />} />
-        <Route path="/branches" element={<BranchesPage />} />
-        <Route path="/slots" element={<SlotsPage />} />
-        <Route path="/profile" element={<MyProfilePage />} />
-        <Route path="/public-news" element={<PublicNewsPage />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public / Semi-public routes */}
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/walkin" element={<WalkinBookingPage />} />
+          <Route path="*" element={<Navigate to="/booking" replace />} />
+          <Route path="/" element={<Navigate to="/landing-dashboard" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/landing-dashboard" element={<LandingPage />} />
+          <Route path="/apply-promotion" element={<ApplyPromotion />} />
+          <Route path="/public-news" element={<PublicNewsPage />} />
+          <Route path="/access-denied" element={<AccessDeniedPage />} />
+
+          {/* Protected routes - all authenticated users */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<MyProfilePage />} />
+            <Route path="/bookinghistory" element={<BookingHistoryPage />} />
+            <Route path="/booking/:id" element={<BookingDetailPage />} />
+          </Route>
+
+          {/* Owner dashboard - chỉ Owner mới được vào */}
+          <Route element={<ProtectedRoute allowedRoles={["Owner"]} />}>
+            <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+          </Route>
+
+          {/* Staff dashboard - chỉ Staff mới được vào */}
+          <Route element={<ProtectedRoute allowedRoles={["Staff"]} />}>
+            <Route path="/staff-dashboard" element={<StaffDashboard />} />
+          </Route>
+
+          {/* Admin routes */}
+          <Route element={<ProtectedRoute requiredPermissions={["VIEW_ROLE", "VIEW_ACCOUNT"]} />}>
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/users" element={<UserList />} />
+            <Route path="/role-permission" element={<RolePermission />} />
+          </Route>
+
+          {/* Management routes (Requires specific permissions) */}
+          <Route element={<ProtectedRoute requiredPermissions={["CREATE_ROOM", "UPDATE_ROOM", "UPDATE_ROOM_STATUS", "CREATE_FACILITY"]} />}>
+            <Route path="/room" element={<RoomPage />} />
+            <Route path="/roomtype" element={<RoomTypePage />} />
+            <Route path="/branches" element={<BranchesPage />} />
+            <Route path="/slots" element={<SlotsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute requiredPermissions={["CREATE_NEWS", "UPDATE_NEWS", "DELETE_NEWS"]} />}>
+            <Route path="/news" element={<NewsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute requiredPermissions={["VIEW_PRODUCT", "CREATE_PRODUCT"]} />}>
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute requiredPermissions={["VIEW_REVENUE", "UPDATE_ROOM_STATUS", "VIEW_PRODUCT"]} />}>
+            <Route path="/feedbacks" element={<FeedbacksPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

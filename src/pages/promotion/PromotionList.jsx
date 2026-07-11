@@ -11,7 +11,7 @@ export default function PromotionList() {
   const fetchPromotions = async () => {
     try {
       setLoading(true);
-      const res = await promotionAPI.getAllPromotions();
+      const res = await promotionAPI.getAllPromotions("", true);
       if (res.data?.success || res.success) {
         setPromotions(res.data?.data || res.data || []);
       } else if (Array.isArray(res)) {

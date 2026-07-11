@@ -1,0 +1,251 @@
+/* ─── AccessDenied.css ──────────────────────────────────────────────────────
+   Full-page 403 / Access Denied error screen
+   Consistent with the project's design tokens from Dashboard.css
+───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes ad-fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ad-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-10px) scale(1.02); }
+}
+@keyframes ad-pulse-ring {
+  0%   { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.6);  opacity: 0; }
+}
+@keyframes ad-spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes ad-blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -20px) scale(1.05); }
+  66%       { transform: translate(-20px, 15px) scale(0.97); }
+}
+
+/* ── Page wrapper ── */
+.ad-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8f5f3 50%, #f0f4f8 100%);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+/* ── Decorative blobs ── */
+.ad-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.35;
+  animation: ad-blob-drift 12s ease-in-out infinite;
+}
+.ad-blob-1 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, #ccfbf1, #5eead4);
+  top: -100px; left: -100px;
+  animation-delay: 0s;
+}
+.ad-blob-2 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #fecdd3, #fb7185);
+  bottom: -80px; right: -80px;
+  animation-delay: -4s;
+}
+.ad-blob-3 {
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, #dbeafe, #93c5fd);
+  top: 40%; left: 60%;
+  animation-delay: -8s;
+}
+
+/* ── Card ── */
+.ad-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  padding: 56px 52px 48px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow:
+    0 20px 60px rgba(16, 42, 67, 0.10),
+    0 4px 16px rgba(16, 42, 67, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  animation: ad-fadeUp 0.6s ease-out both;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Lock icon ── */
+.ad-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  width: 96px;
+  height: 96px;
+}
+.ad-icon-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.25);
+  animation: ad-pulse-ring 2s ease-out infinite;
+}
+.ad-icon-core {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef2f2, #ffe4e6);
+  border: 2px solid rgba(239, 68, 68, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+  animation: ad-float 3.5s ease-in-out infinite;
+}
+.ad-icon-core .ti {
+  font-size: 32px;
+  color: #ef4444;
+}
+
+/* ── Error code ── */
+.ad-code {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+  animation: ad-fadeUp 0.6s ease-out 0.1s both;
+}
+
+/* ── Title ── */
+.ad-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #102a43;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+  animation: ad-fadeUp 0.6s ease-out 0.15s both;
+}
+
+/* ── Description ── */
+.ad-desc {
+  font-size: 14.5px;
+  color: #627d98;
+  line-height: 1.7;
+  margin: 0 0 20px;
+  font-weight: 500;
+  animation: ad-fadeUp 0.6s ease-out 0.2s both;
+}
+.ad-desc strong {
+  color: #102a43;
+  font-weight: 700;
+}
+
+/* ── Info box ── */
+.ad-info-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f4f8;
+  border: 1px solid #d9e2ec;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #52606d;
+  margin-bottom: 28px;
+  animation: ad-fadeUp 0.6s ease-out 0.25s both;
+}
+.ad-info-box .ti {
+  font-size: 16px;
+  color: #0f766e;
+}
+
+/* ── Action buttons ── */
+.ad-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  animation: ad-fadeUp 0.6s ease-out 0.3s both;
+}
+
+.ad-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  border: 1.5px solid #d9e2ec;
+  background: white;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #52606d;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.ad-btn-back:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.12);
+}
+.ad-btn-back .ti { font-size: 15px; }
+
+.ad-btn-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.22);
+}
+.ad-btn-home:hover {
+  background: linear-gradient(135deg, #0d5e57, #0f766e);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(15, 118, 110, 0.32);
+}
+.ad-btn-home .ti { font-size: 15px; }
+
+/* ── Responsive ── */
+@media (max-width: 560px) {
+  .ad-card {
+    padding: 40px 24px 36px;
+  }
+  .ad-code {
+    font-size: 56px;
+  }
+  .ad-actions {
+    flex-direction: column;
+  }
+  .ad-btn-back,
+  .ad-btn-home {
+    width: 100%;
+    justify-content: center;
+  }
+}

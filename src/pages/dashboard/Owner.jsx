@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
@@ -9,6 +9,7 @@ import bookingAPI from "../../services/booking.service";
 import feedbackAPI from "../../services/feedback.service";
 import branchAPI from "../../services/branch.service";
 import promotionAPI from "../../services/promotion.service";
+import { useAuth } from "../../context/AuthContext";
 
 export const ownerMenuItems = [
   {
@@ -17,7 +18,7 @@ export const ownerMenuItems = [
   },
   {
     section: "Đặt phòng",
-    items: [{ icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory" }],
+    items: [{ icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory", requiredPermission: "VIEW_BOOKING_HISTORY" }],
   },
   {
     section: "Cơ sở vật chất",
@@ -35,7 +36,7 @@ export const ownerMenuItems = [
   {
     section: "Marketing",
     items: [
-      { icon: "ti-ticket", label: "Quản lý khuyến mãi", key: "promotion" },
+      { icon: "ti-ticket", label: "Quản lý khuyến mãi", key: "promotion", requiredPermission: "VIEW_PROMOTION" },
       { icon: "ti-news", label: "Quản lý tin tức", key: "news" },
     ],
   },
@@ -74,6 +75,7 @@ function decodeToken(token) {
 
 
 export default function OwnerDashboard() {
+  const { hasPermission } = useAuth();
   const [active, setActive] = useState("revenue");
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -258,7 +260,11 @@ export default function OwnerDashboard() {
         {/* Content */}
         <div className="content">
           {active === "promotion" ? (
-            <PromotionList />
+            hasPermission("VIEW_PROMOTION") ? (
+              <PromotionList />
+            ) : (
+              <Navigate to="/access-denied" replace />
+            )
           ) : (
             <>
               <div>

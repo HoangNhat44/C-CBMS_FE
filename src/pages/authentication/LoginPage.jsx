@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import "./Auth.css";
 import authAPI from "../../services/auth.service";
 
@@ -17,6 +18,7 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -32,10 +34,10 @@ function LoginPage() {
       const response = await authAPI.login(form.email, form.password);
       const { token, user } = response.data.data;
 
-      localStorage.setItem("token", token);
+      login(user, token);
 
       // Điều hướng theo role
-      const roleName = user?.role?.name?.toLowerCase();
+      const roleName = user?.role?.name?.toLowerCase() || user?.roleId?.name?.toLowerCase();
       const destination = ROLE_ROUTES[roleName] ?? "/landing-dashboard";
       navigate(destination, { replace: true });
 

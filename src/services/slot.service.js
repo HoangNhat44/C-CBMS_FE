@@ -10,11 +10,11 @@ const slotAPI = {
   // Tạo mới slot (Chỉ Owner)
   createSlot: (data) => apiClient.post('/slots', data),
 
-  // Cập nhật slot (Chỉ Owner)
+  // Cập nhật slot
   updateSlot: (id, data) => apiClient.put(`/slots/${id}`, data),
 
-  // Vô hiệu hóa/Xóa mềm slot (Chỉ Owner)
-  deleteSlot: (id) => apiClient.delete(`/slots/${id}`),
+  // Cập nhật trạng thái slot (kích hoạt/tạm khóa)
+  updateSlotStatus: (id, isActive) => apiClient.patch(`/slots/${id}/status`, { isActive }),
 };
 
 export default slotAPI;

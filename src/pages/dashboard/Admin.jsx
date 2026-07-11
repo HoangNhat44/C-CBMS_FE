@@ -4,6 +4,7 @@ import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import UserList from "../account/UserList";
+import RolePermission from "../account/RolePermission";
 import userAPI from "../../services/user.service";
 import roleAPI from "../../services/role.service";
 
@@ -25,14 +26,6 @@ const menuItems = [
     section: "Phân quyền",
     items: [
       { icon: "ti-shield-lock", label: "Vai trò hệ thống", key: "roles" },
-      { icon: "ti-lock", label: "Quyền hạn", key: "permissions", child: true },
-    ],
-  },
-  {
-    section: "Hệ thống",
-    items: [
-      { icon: "ti-report-analytics", label: "Nhật ký hoạt động", key: "logs" },
-      { icon: "ti-settings", label: "Cài đặt chung", key: "settings" },
     ],
   },
 ];
@@ -204,6 +197,8 @@ export default function AdminDashboard() {
         <div className="content">
           {active === "users" ? (
             <UserList />
+          ) : active === "roles" ? (
+            <RolePermission />
           ) : (
             <>
               <div>
@@ -383,56 +378,7 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-
-                <div className="card">
-                  <div className="card-head">
-                    <div className="card-title">
-                      <i className="ti ti-lock" aria-hidden="true" />
-                      Ma trận quyền hạn
-                    </div>
-                    <span className="card-more">Chỉnh sửa</span>
-                  </div>
-                  {permissionGroups.map((pg) => (
-                    <div key={pg.group} style={{ marginBottom: 16 }}>
-                      <div style={{
-                        fontSize: 11, fontWeight: 800, color: "var(--text-muted)",
-                        textTransform: "uppercase", letterSpacing: ".07em",
-                        marginBottom: 8, paddingBottom: 6,
-                        borderBottom: "1px solid var(--border-light)",
-                      }}>
-                        {pg.group}
-                      </div>
-                      <table className="dash-table">
-                        <thead>
-                          <tr>
-                            <th>Quyền</th>
-                            <th style={{ textAlign: "center" }}>Admin</th>
-                            <th style={{ textAlign: "center" }}>Owner</th>
-                            <th style={{ textAlign: "center" }}>Staff</th>
-                            <th style={{ textAlign: "center" }}>Customer</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pg.perms.map((p) => (
-                            <tr key={p.name}>
-                              <td style={{ fontSize: 12, fontWeight: 600 }}>{p.label}</td>
-                              {["admin", "owner", "staff", "customer"].map((role) => (
-                                <td key={role} style={{ textAlign: "center" }}>
-                                  {p[role]
-                                    ? <i className="ti ti-circle-check" style={{ color: "#16a34a", fontSize: 16 }} />
-                                    : <i className="ti ti-circle-x" style={{ color: "#d1d5db", fontSize: 16 }} />
-                                  }
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
               </div>
-
 
             </>
           )}

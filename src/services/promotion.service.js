@@ -3,8 +3,11 @@ import apiClient from "./apiClient";
 const API_URL = "/promotions";
 
 const promotionAPI = {
-  getAllPromotions: async (branchId = "") => {
-    const res = await apiClient.get(`${API_URL}${branchId ? `?branchId=${branchId}` : ""}`);
+  getAllPromotions: async (branchId = "", isManagement = false) => {
+    let url = `${API_URL}?`;
+    if (branchId) url += `branchId=${branchId}&`;
+    if (isManagement) url += `isManagement=true&`;
+    const res = await apiClient.get(url);
     return res.data;
   },
 

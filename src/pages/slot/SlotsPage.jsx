@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import { ownerMenuItems } from "../dashboard/Owner";
 import Topbar from "../../components/Topbar";
+import RequirePermission from "../../components/RequirePermission";
 import slotAPI from "../../services/slot.service";
 import "../dashboard/Dashboard.css";
 import "./SlotsPage.css";
@@ -184,14 +185,14 @@ export default function SlotsPage() {
 
   const handleToggleActive = async (slot) => {
     const newStatus = !slot.isActive;
-    const confirmMsg = newStatus 
+    const confirmMsg = newStatus
       ? `Bạn muốn kích hoạt hoạt động lại cho slot "${slot.name}" (${slot.startTime} - ${slot.endTime})?`
       : `Bạn có chắc muốn tạm dừng hoạt động slot "${slot.name}" (${slot.startTime} - ${slot.endTime})?`;
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      const res = await slotAPI.updateSlot(slot._id, { ...slot, isActive: newStatus });
+      const res = await slotAPI.updateSlotStatus(slot._id, newStatus);
       if (res.data?.success) {
         setSuccess(`Đã ${newStatus ? "kích hoạt" : "tạm khóa"} slot thành công!`);
         fetchSlots();
@@ -204,30 +205,13 @@ export default function SlotsPage() {
     }
   };
 
-  const handleDelete = async (slot) => {
-    if (!window.confirm(`Bạn có chắc muốn vô hiệu hóa hoạt động của slot "${slot.name}" (${slot.startTime} - ${slot.endTime})?`)) return;
-
-    try {
-      const res = await slotAPI.deleteSlot(slot._id);
-      if (res.data?.success) {
-        setSuccess(`Vô hiệu hóa hoạt động slot thành công!`);
-        fetchSlots();
-      } else {
-        setError(res.data?.message || "Không thể vô hiệu hóa hoạt động slot.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Lỗi khi gửi yêu cầu vô hiệu hóa hoạt động slot.");
-    }
-  };
-
   // Filtered slots list
   const filteredSlots = slots.filter((slot) => {
-    const matchesSearch = 
+    const matchesSearch =
       slot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       slot.startTime.includes(searchTerm) ||
       slot.endTime.includes(searchTerm);
-    
+
     let matchesStatus = true;
     if (statusFilter === "active") matchesStatus = slot.isActive === true;
     if (statusFilter === "inactive") matchesStatus = slot.isActive === false;
@@ -237,10 +221,10 @@ export default function SlotsPage() {
 
   return (
     <div className="dash">
-      <Sidebar 
-        menuItems={ownerMenuItems} 
-        active="slot" 
-        setActive={handleMenuChange} 
+      <Sidebar
+        menuItems={ownerMenuItems}
+        active="slot"
+        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate("/owner-dashboard")}
       />
@@ -319,21 +303,20 @@ export default function SlotsPage() {
                         </span>
                       </td>
                       <td className="text-right action-cell">
-                        <button
-                          className={`action-btn toggle-status ${slot.isActive ? "active" : "inactive"}`}
-                          onClick={() => handleToggleActive(slot)}
-                          title={slot.isActive ? "Tạm khóa slot" : "Kích hoạt lại slot"}
-                        >
-                          {slot.isActive ? "Tạm khóa" : "Kích hoạt"}
-                        </button>
-                        <button className="action-btn edit" onClick={() => openEditModal(slot)}>
-                          Sửa
-                        </button>
-                        {slot.isActive && (
-                          <button className="action-btn delete" onClick={() => handleDelete(slot)} title="Vô hiệu hóa slot">
-                            Vô hiệu hóa
+                        <RequirePermission require={["UPDATE_SLOT_STATUS"]}>
+                          <button
+                            className={`action-btn toggle-status ${slot.isActive ? "active" : "inactive"}`}
+                            onClick={() => handleToggleActive(slot)}
+                            title={slot.isActive ? "Tạm khóa slot" : "Kích hoạt lại slot"}
+                          >
+                            {slot.isActive ? "Tạm khóa" : "Kích hoạt"}
                           </button>
-                        )}
+                        </RequirePermission>
+                        <RequirePermission require={["UPDATE_SLOT"]}>
+                          <button className="action-btn edit" onClick={() => openEditModal(slot)}>
+                            Sửa
+                          </button>
+                        </RequirePermission>
                       </td>
                     </tr>
                   ))}

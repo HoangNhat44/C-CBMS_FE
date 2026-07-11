@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import bookingAPI from "../../services/booking.service";
 import authAPI from "../../services/auth.service";
 import branchAPI from "../../services/branch.service";
@@ -195,9 +195,20 @@ function BookingHistoryPage() {
   const roleName = (currentUser?.role?.name || currentUser?.role || "").toLowerCase();
   const isDashboardRole = roleName === "owner" || roleName === "staff";
 
+  const checkPermission = (permCode) => {
+    if (!currentUser) return false;
+    const perms = currentUser.role?.permissions || currentUser.roleId?.permissions || [];
+    return perms.some(p => (p.code || p) === permCode);
+  };
+
   if (isDashboardRole) {
+    const hasViewHistory = checkPermission("VIEW_BOOKING_HISTORY");
     const menuItems = roleName === "staff" ? staffMenuItems : ownerMenuItems;
     
+    if (!hasViewHistory) {
+      return <Navigate to="/access-denied" replace />;
+    }
+
     return (
       <div className={`dash ${roleName === "staff" ? "dash--staff" : ""}`}>
         <Sidebar
