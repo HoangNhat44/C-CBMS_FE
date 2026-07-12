@@ -57,12 +57,12 @@ function App() {
           </Route>
 
           {/* Owner dashboard - chỉ Owner mới được vào */}
-          <Route element={<ProtectedRoute allowedRoles={["Owner"]} />}>
+          <Route element={<ProtectedRoute requiredPermissions={["VIEW_REVENUE"]} />}>
             <Route path="/owner-dashboard" element={<OwnerDashboard />} />
           </Route>
 
           {/* Staff dashboard - chỉ Staff mới được vào */}
-          <Route element={<ProtectedRoute allowedRoles={["Staff"]} />}>
+          <Route element={<ProtectedRoute requiredPermissions={["VIEW_BOOKING_SCHEDULE"]} />}>
             <Route path="/staff-dashboard" element={<StaffDashboard />} />
           </Route>
 

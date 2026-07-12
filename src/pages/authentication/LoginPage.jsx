@@ -4,14 +4,6 @@ import { useAuth } from "../../context/AuthContext";
 import "./Auth.css";
 import authAPI from "../../services/auth.service";
 
-// Map role name → route
-const ROLE_ROUTES = {
-  customer: "/landing-dashboard",
-  owner:    "/owner-dashboard",
-  staff:    "/staff-dashboard",
-  admin:    "/admin-dashboard",
-};
-
 function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPassword, setShowPassword] = useState(false);
@@ -36,9 +28,19 @@ function LoginPage() {
 
       login(user, token);
 
-      // Điều hướng theo role
-      const roleName = user?.role?.name?.toLowerCase() || user?.roleId?.name?.toLowerCase();
-      const destination = ROLE_ROUTES[roleName] ?? "/landing-dashboard";
+      // Điều hướng theo permission
+      const permissions = user?.role?.permissions || user?.roleId?.permissions || [];
+      const codes = permissions.map(p => p.code || p);
+
+      let destination = "/landing-dashboard";
+      if (codes.includes("VIEW_ROLE") || codes.includes("VIEW_ACCOUNT")) {
+        destination = "/admin-dashboard";
+      } else if (codes.includes("VIEW_REVENUE")) {
+        destination = "/owner-dashboard";
+      } else if (codes.includes("VIEW_BOOKING_SCHEDULE") || codes.includes("UPDATE_BOOKING")) {
+        destination = "/staff-dashboard";
+      }
+
       navigate(destination, { replace: true });
 
     } catch (err) {

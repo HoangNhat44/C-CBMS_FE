@@ -5,7 +5,7 @@ import "./AccessDenied.css";
 
 export default function AccessDeniedPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   // roleId có thể là object (populated) hoặc string (id)
   // role là object được format với trường name
@@ -20,12 +20,17 @@ export default function AccessDeniedPage() {
   };
 
   const handleGoHome = () => {
-    const role = roleName.toLowerCase();
-    if (role === "owner") navigate("/owner-dashboard");
-    else if (role === "staff") navigate("/staff-dashboard");
-    else if (role === "admin") navigate("/admin-dashboard");
-    else if (role === "customer") navigate("/booking");
-    else navigate("/landing-dashboard");
+    if (hasPermission("VIEW_ROLE") || hasPermission("VIEW_ACCOUNT")) {
+      navigate("/admin-dashboard");
+    } else if (hasPermission("VIEW_REVENUE")) {
+      navigate("/owner-dashboard");
+    } else if (hasPermission("VIEW_BOOKING_SCHEDULE") || hasPermission("UPDATE_BOOKING")) {
+      navigate("/staff-dashboard");
+    } else if (hasPermission("VIEW_BOOKING_HISTORY")) {
+      navigate("/booking");
+    } else {
+      navigate("/landing-dashboard");
+    }
   };
 
   return (

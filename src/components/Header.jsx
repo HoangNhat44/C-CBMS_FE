@@ -75,9 +75,13 @@ export default function Header() {
         <div className="nav-links">
           <Link to="/landing-dashboard" className={`nav-link ${currentPath === "/landing-dashboard" ? "active" : ""}`}>Trang chủ</Link>
           <Link to="/booking" className={`nav-link ${currentPath === "/booking" ? "active" : ""}`}>Đặt Phòng</Link>
-          <Link to="/bookinghistory" className={`nav-link ${currentPath === "/bookinghistory" ? "active" : ""}`}>Lịch sử đặt phòng</Link>
+          {user && (
+            <Link to="/bookinghistory" className={`nav-link ${currentPath === "/bookinghistory" ? "active" : ""}`}>Lịch sử đặt phòng</Link>
+          )}
           <Link to="/public-news" className={`nav-link ${currentPath === "/public-news" ? "active" : ""}`}>Bảng tin</Link>
-          <Link to="/feedbacks" className={`nav-link ${currentPath === "/feedbacks" ? "active" : ""}`}>Đánh giá</Link>
+          {user && ["owner", "staff", "admin"].includes(user.role?.toLowerCase()) && (
+            <Link to="/feedbacks" className={`nav-link ${currentPath === "/feedbacks" ? "active" : ""}`}>Đánh giá</Link>
+          )}
         </div>
 
         <div className="nav-auth">
