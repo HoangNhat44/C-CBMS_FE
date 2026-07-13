@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -5,7 +6,7 @@ import "./AccessDenied.css";
 
 export default function AccessDeniedPage() {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
 
   // roleId có thể là object (populated) hoặc string (id)
   // role là object được format với trường name
@@ -20,17 +21,12 @@ export default function AccessDeniedPage() {
   };
 
   const handleGoHome = () => {
-    if (hasPermission("VIEW_ROLE") || hasPermission("VIEW_ACCOUNT")) {
-      navigate("/admin-dashboard");
-    } else if (hasPermission("VIEW_REVENUE")) {
-      navigate("/owner-dashboard");
-    } else if (hasPermission("VIEW_BOOKING_SCHEDULE") || hasPermission("UPDATE_BOOKING")) {
-      navigate("/staff-dashboard");
-    } else if (hasPermission("VIEW_BOOKING_HISTORY")) {
-      navigate("/booking");
-    } else {
-      navigate("/landing-dashboard");
-    }
+    const role = roleName.toLowerCase();
+    if (role === "admin") navigate("/admin-dashboard");
+    else if (role === "owner") navigate("/owner-dashboard");
+    else if (role === "staff") navigate("/staff-dashboard");
+    else if (role === "customer") navigate("/booking");
+    else navigate("/landing-dashboard");
   };
 
   return (

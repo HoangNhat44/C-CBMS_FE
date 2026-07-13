@@ -28,18 +28,19 @@ function LoginPage() {
 
       login(user, token);
 
-      // Điều hướng theo permission
-      const permissions = user?.role?.permissions || user?.roleId?.permissions || [];
-      const codes = permissions.map(p => p.code || p);
+      // Điều hướng theo role name — Role quyết định dashboard ban đầu
+      // Permissions quyết định quyền truy cập cụ thể trong dashboard (xử lý bởi ProtectedRoute)
+      const roleName = (user?.role?.name || user?.roleId?.name || "").toLowerCase();
 
       let destination = "/landing-dashboard";
-      if (codes.includes("VIEW_ROLE") || codes.includes("VIEW_ACCOUNT")) {
+      if (roleName === "admin") {
         destination = "/admin-dashboard";
-      } else if (codes.includes("VIEW_REVENUE")) {
+      } else if (roleName === "owner") {
         destination = "/owner-dashboard";
-      } else if (codes.includes("VIEW_BOOKING_SCHEDULE") || codes.includes("UPDATE_BOOKING")) {
+      } else if (roleName === "staff") {
         destination = "/staff-dashboard";
       }
+      // customer → /landing-dashboard (mặc định)
 
       navigate(destination, { replace: true });
 
