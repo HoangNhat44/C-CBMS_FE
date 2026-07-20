@@ -8,6 +8,11 @@ const roomTypeAPI = {
     return res.data;
   },
 
+  getPublicRoomTypes: async () => {
+    const res = await apiClient.get(`${API_URL}/public`);
+    return res.data;
+  },
+
   createRoomType: async (data) => {
     const res = await apiClient.post(API_URL, data);
     return res.data;

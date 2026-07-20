@@ -1,16 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import roomTypeAPI from "../../services/roomType.service";
 import "./Dashboard.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-
-const rooms = [
-  { tag: "VIP", tagClass: "tag-vip", name: "Phòng VIP", people: "2 - 4 người", area: "20 - 30m²", price: "150.000₫/giờ", img: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&q=80" },
-  { tag: "Thường", tagClass: "tag-standard", name: "Phòng Thường", people: "4 - 6 người", area: "25 - 40m²", price: "100.000₫/giờ", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80" },
-  { tag: "Premium", tagClass: "tag-premium", name: "Phòng Premium", people: "6 - 8 người", area: "40 - 60m²", price: "180.000₫/giờ", img: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=400&q=80" },
-  { tag: "Nhóm nhỏ", tagClass: "tag-small", name: "Phòng Nhóm nhỏ", people: "2 - 3 người", area: "15 - 20m²", price: "80.000₫/giờ", img: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=400&q=80" },
-];
-
 const features = [
   { icon: "ti-shield-check", title: "Xác nhận nhanh chóng", desc: "Nhận xác nhận đặt phòng ngay lập tức" },
   { icon: "ti-calendar-x", title: "Hủy/đổi linh hoạt", desc: "Dễ dàng hủy hoặc đổi lịch theo quy định" },
@@ -31,7 +24,36 @@ export default function LandingPage() {
   const [slot, setSlot] = useState("10:00 - 12:00");
   const [people, setPeople] = useState("2 người");
   const [type, setType] = useState("Tất cả");
+  const [rooms, setRooms] = useState([]);
+  const [showAll, setShowAll] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const res = await roomTypeAPI.getPublicRoomTypes();
+        if (res.success) {
+          setRooms(res.data);
+        }
+      } catch (error) {
+        console.error("Failed to load room types:", error);
+      }
+    };
+    fetchRooms();
+  }, []);
+
+  const getTagInfo = (name) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("vip")) return { tag: "VIP", tagClass: "tag-vip" };
+    if (n.includes("premium")) return { tag: "Premium", tagClass: "tag-premium" };
+    if (n.includes("nhóm") || n.includes("nhỏ")) return { tag: "Nhóm nhỏ", tagClass: "tag-small" };
+    return { tag: "Thường", tagClass: "tag-standard" };
+  };
+
+  const formatPrice = (price) => {
+    if (!price || price === 0) return "Đang cập nhật";
+    return new Intl.NumberFormat("vi-VN").format(price) + "₫/giờ";
+  };
 
   return (
     <div className="lp">
@@ -64,15 +86,10 @@ export default function LandingPage() {
         </div>
         <div className="hero-right">
           <img
-            src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=85"
-            alt="Không gian phòng họp hiện đại"
+            src="/images/banner3.jpg"
+            alt="Phòng giải trí"
             className="hero-img"
           />
-          <div className="hero-img-overlay">
-            <span>TẬP TRUNG</span>
-            <span>SÁNG TẠO</span>
-            <span>TRUYỀN CẢM HỨNG</span>
-          </div>
         </div>
       </section>
 
@@ -97,27 +114,32 @@ export default function LandingPage() {
         <div className="rooms-head">
           <div>
             <div className="sec-title">Khám phá không gian</div>
-            <div className="sec-sub">Đa dạng loại phòng phù hợp với nhu cầu của bạn</div>
+            <p>Đa dạng loại phòng phù hợp với nhu cầu của bạn</p>
           </div>
-          <a href="#" className="rooms-all">Xem tất cả phòng →</a>
+          <a href="#" className="rooms-all" onClick={(e) => { e.preventDefault(); setShowAll(!showAll); }}>
+            {showAll ? "Thu gọn ←" : "Xem tất cả phòng →"}
+          </a>
         </div>
         <div className="rooms-grid">
-          {rooms.map((r) => (
-            <div className="room-card" key={r.name}>
-              <div className="room-img-wrap">
-                <img src={r.img} alt={r.name} className="room-img" />
-                <span className={`room-tag ${r.tagClass}`}>{r.tag}</span>
-              </div>
-              <div className="room-info">
-                <div className="room-name">{r.name}</div>
-                <div className="room-meta">
-                  <span><i className="ti ti-users" aria-hidden="true" /> {r.people}</span>
-                  <span><i className="ti ti-layout-2" aria-hidden="true" /> {r.area}</span>
+          {(showAll ? rooms : rooms.slice(0, 4)).map((r) => {
+            const { tag, tagClass } = getTagInfo(r.name);
+            return (
+              <div className="room-card" key={r._id || r.name}>
+                <div className="room-img-wrap">
+                  <img src={r.image || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80"} alt={r.name} className="room-img" />
+                  <span className={`room-tag ${tagClass}`}>{tag}</span>
                 </div>
-                <div className="room-price">{r.price}</div>
+                <div className="room-info">
+                  <div className="room-name">{r.name}</div>
+                  <div className="room-meta">
+                    <span><i className="ti ti-users" aria-hidden="true" /> Lên đến {r.capacity} người</span>
+                    {/* <span><i className="ti ti-layout-2" aria-hidden="true" /> {r.area}</span> */}
+                  </div>
+                  <div className="room-price">{formatPrice(r.price)}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

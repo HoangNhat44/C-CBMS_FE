@@ -587,18 +587,18 @@ function BookingPage() {
                         <div className="room-card__visual">
                           <img
                             src={
-                              room.images?.[0] ||
+                              categoryObj.roomType.image ||
                               "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"
                             }
-                            alt={room.roomName}
+                            alt={categoryObj.roomType.name}
                           />
                           <span className="room-visual__badge">
-                            Max {room.capacity} người
+                            Max {categoryObj.roomType.capacity} người
                           </span>
                         </div>
 
                         <div className="room-card__details">
-                          <h4 className="room-card__name">{room.roomName}</h4>
+                          <h4 className="room-card__name">{categoryObj.roomType.name}</h4>
                           
                           <div className="slots-grid">
                             {room.slots.map((slot) => {

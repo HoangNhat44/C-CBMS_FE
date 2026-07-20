@@ -11,6 +11,8 @@ import { staffMenuItems } from "../dashboard/Staff";
 import "../dashboard/Dashboard.css";
 import "./BookingHistoryPage.css";
 
+import { useAuth } from "../../context/AuthContext";
+
 function decodeToken(token) {
   try {
     const payload = token.split(".")[1];
@@ -30,7 +32,7 @@ function BookingHistoryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user: currentUser, hasPermission } = useAuth();
 
   const [branches, setBranches] = useState([]);
   const [selectedBranchFilter, setSelectedBranchFilter] = useState("all");
@@ -66,50 +68,17 @@ function BookingHistoryPage() {
 
   // Fetch bookings for the logged-in customer (or all if staff/admin/owner)
   useEffect(() => {
-    const checkUserAndFetchBookings = async () => {
+    const fetchBookings = async () => {
       try {
         setLoading(true);
         setError("");
-        
-        let userObj = null;
-        const token = localStorage.getItem("token");
-        if (token) {
-          // Decode immediately
-          const decoded = decodeToken(token);
-          if (decoded && decoded.exp * 1000 > Date.now()) {
-            userObj = {
-              id: decoded.userId,
-              email: decoded.email,
-              role: decoded.role,
-            };
-            setCurrentUser(userObj);
-          }
-
-          // Verify with backend
-          try {
-            const verifyRes = await authAPI.verifyToken();
-            if (verifyRes.data?.success) {
-              userObj = verifyRes.data.data.user;
-              setCurrentUser(userObj);
-            } else {
-              localStorage.removeItem("token");
-              userObj = null;
-              setCurrentUser(null);
-            }
-          } catch (verifyErr) {
-            console.error("Token verification failed:", verifyErr);
-            localStorage.removeItem("token");
-            userObj = null;
-            setCurrentUser(null);
-          }
-        }
 
         const params = {};
-        if (userObj) {
-          const roleName = (userObj.role?.name || userObj.role || "").toLowerCase();
+        if (currentUser) {
+          const roleName = (currentUser.role?.name || currentUser.role || "").toLowerCase();
           // If customer, only show their own bookings
           if (roleName === "customer") {
-            params.customerId = userObj.id || userObj._id;
+            params.customerId = currentUser.id || currentUser._id;
           } else if (roleName === "owner" && selectedBranchFilter !== "all") {
             params.branchId = selectedBranchFilter;
           }
@@ -134,8 +103,8 @@ function BookingHistoryPage() {
       }
     };
 
-    checkUserAndFetchBookings();
-  }, [selectedBranchFilter]);
+    fetchBookings();
+  }, [currentUser, selectedBranchFilter]);
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -195,14 +164,8 @@ function BookingHistoryPage() {
   const roleName = (currentUser?.role?.name || currentUser?.role || "").toLowerCase();
   const isDashboardRole = roleName === "owner" || roleName === "staff";
 
-  const checkPermission = (permCode) => {
-    if (!currentUser) return false;
-    const perms = currentUser.role?.permissions || currentUser.roleId?.permissions || [];
-    return perms.some(p => (p.code || p) === permCode);
-  };
-
   if (isDashboardRole) {
-    const hasViewHistory = checkPermission("VIEW_BOOKING_HISTORY");
+    const hasViewHistory = hasPermission("VIEW_BOOKING_HISTORY");
     const menuItems = roleName === "staff" ? staffMenuItems : ownerMenuItems;
     
     if (!hasViewHistory) {

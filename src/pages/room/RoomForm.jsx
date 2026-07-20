@@ -5,7 +5,7 @@ const emptyForm = {
   roomTypeId: "",
   roomName: "",
   capacity: 1,
-  images: "",
+  image: "",
   facilities: "",
   status: "available",
 };
@@ -20,7 +20,7 @@ export default function RoomForm({ room, branches, roomTypes, selectedBranchId, 
         roomTypeId: room.roomTypeId?._id || room.roomTypeId || "",
         roomName: room.roomName || "",
         capacity: room.capacity || 1,
-        images: (room.images || []).join("\n"),
+        image: room.image || "",
         facilities: (room.facilities || []).join(", "),
         status: room.status || "available",
       });
@@ -42,10 +42,7 @@ export default function RoomForm({ room, branches, roomTypes, selectedBranchId, 
     event.preventDefault();
     onSubmit({
       ...formData,
-      images: formData.images
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
+      image: formData.image,
       facilities: formData.facilities
         .split(",")
         .map((item) => item.trim())
@@ -133,12 +130,12 @@ export default function RoomForm({ room, branches, roomTypes, selectedBranchId, 
 
         <label>
           Ảnh phòng
-          <textarea
-            name="images"
-            value={formData.images}
+          <input
+            name="image"
+            value={formData.image}
             onChange={handleChange}
-            placeholder="Mỗi dòng là một URL ảnh"
-            rows="3"
+            placeholder="Nhập URL ảnh"
+            type="text"
           />
         </label>
 
