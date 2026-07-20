@@ -138,29 +138,37 @@ export default function RoomPage() {
     }
   };
 
-  const handleSaveRoom = async (data) => {
+  const handleSaveRoom = async (formData) => {
+    // formData is a FormData instance from RoomForm
+    const branchId = formData.get("branchId") || selectedBranchId;
+
     try {
       if (editingRoom) {
-        const res = await roomAPI.updateRoom(editingRoom._id, data);
+        const res = await roomAPI.updateRoom(editingRoom._id, formData);
         if (!res.success) throw new Error(res.message || "Update room failed");
       } else {
-        const res = await roomAPI.createRoom(data);
+        const res = await roomAPI.createRoom(formData);
         if (!res.success) throw new Error(res.message || "Create room failed");
       }
 
       setMode("list");
       setEditingRoom(null);
-      await fetchRooms(data.branchId || selectedBranchId);
-      setSelectedBranchId(data.branchId || selectedBranchId);
+      await fetchRooms(branchId);
+      setSelectedBranchId(branchId);
     } catch (error) {
       console.error("Save room failed", error);
-      const branch = branches.find((item) => item._id === data.branchId);
-      const roomType = roomTypes.find((item) => item._id === data.roomTypeId);
+      // Build local fallback from FormData
+      const localData = {};
+      for (const [key, value] of formData.entries()) {
+        if (key !== "image") localData[key] = value;
+      }
+      const branch = branches.find((item) => item._id === localData.branchId);
+      const roomType = roomTypes.find((item) => item._id === localData.roomTypeId);
       const localRoom = {
-        ...data,
+        ...localData,
         _id: editingRoom?._id || `local-${Date.now()}`,
-        branchId: branch || data.branchId,
-        roomTypeId: roomType || data.roomTypeId,
+        branchId: branch || localData.branchId,
+        roomTypeId: roomType || localData.roomTypeId,
       };
 
       setApiOffline(true);
@@ -169,7 +177,7 @@ export default function RoomPage() {
           ? prev.map((room) => (room._id === editingRoom._id ? localRoom : room))
           : [localRoom, ...prev]
       );
-      setSelectedBranchId(data.branchId || selectedBranchId);
+      setSelectedBranchId(branchId);
       setMode("list");
       setEditingRoom(null);
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import ChangePasswordModal from "../pages/authentication/ChangePasswordModal";
+import "./Header.css";
 
 function decodeToken(token) {
   try {

@@ -6,6 +6,7 @@ import Topbar from "../../components/Topbar";
 import userAPI from "../../services/user.service";
 import roomAPI from "../../services/room.service";
 import bookingAPI from "../../services/booking.service";
+import AddUserModal from "../account/AddUserModal";
 
 export const staffMenuItems = [
   {
@@ -42,6 +43,12 @@ export const staffMenuItems = [
       { icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory" },
     ],
   },
+  {
+    section: "Hệ thống",
+    items: [
+      { icon: "ti-user-plus", label: "Thêm người dùng", key: "adduser" }
+    ],
+  },
 ];
 
 
@@ -63,6 +70,7 @@ export default function StaffDashboard() {
   const [customersList, setCustomersList] = useState([]);
   const [roomsList, setRoomsList] = useState([]);
   const [activeBookings, setActiveBookings] = useState(0);
+  const [showAddUser, setShowAddUser] = useState(false);
   const navigate = useNavigate();
 
 
@@ -184,6 +192,10 @@ export default function StaffDashboard() {
             navigate("/walkin");
             return;
           }
+          if (key === "adduser") {
+            setShowAddUser(true);
+            return;
+          }
           setActive(key);
         }}
         handleLogout={handleLogout}
@@ -284,12 +296,12 @@ export default function StaffDashboard() {
                       pillType = "pill-off";
                     }
                     return (
-                    <tr key={r._id}>
-                      <td>{r.roomName}</td>
-                      <td className="td-muted">{r.roomTypeId?.typeName || r.roomTypeId?.name || "Loại phòng"}</td>
-                      <td className="td-muted">{r.capacity} người</td>
-                      <td><span className={`pill ${pillType}`}>{statusText}</span></td>
-                    </tr>
+                      <tr key={r._id}>
+                        <td>{r.roomName}</td>
+                        <td className="td-muted">{r.roomTypeId?.typeName || r.roomTypeId?.name || "Loại phòng"}</td>
+                        <td className="td-muted">{r.capacity} người</td>
+                        <td><span className={`pill ${pillType}`}>{statusText}</span></td>
+                      </tr>
                     );
                   })}
                   {roomsList.length === 0 && (
@@ -307,7 +319,12 @@ export default function StaffDashboard() {
           </div>
         </div>
       </div>
-
+      {showAddUser && (
+        <AddUserModal
+          onClose={() => setShowAddUser(false)}
+          onSuccess={() => alert("Thêm người dùng thành công!")}
+        />
+      )}
     </div>
   );
 }

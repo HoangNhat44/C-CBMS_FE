@@ -17,13 +17,17 @@ const roomAPI = {
     return res.data;
   },
 
-  createRoom: async (data) => {
-    const res = await apiClient.post(API_URL, data);
+  createRoom: async (formData) => {
+    const res = await apiClient.post(API_URL, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data;
   },
 
-  updateRoom: async (id, data) => {
-    const res = await apiClient.put(`${API_URL}/${id}`, data);
+  updateRoom: async (id, formData) => {
+    const res = await apiClient.put(`${API_URL}/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data;
   },
 

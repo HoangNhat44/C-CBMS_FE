@@ -7,9 +7,10 @@ import PromotionList from "../promotion/PromotionList";
 import userAPI from "../../services/user.service";
 import bookingAPI from "../../services/booking.service";
 import feedbackAPI from "../../services/feedback.service";
-import branchAPI from "../../services/branch.service";
 import promotionAPI from "../../services/promotion.service";
+import branchAPI from "../../services/branch.service";
 import { useAuth } from "../../context/AuthContext";
+import AddUserModal from "../account/AddUserModal";
 
 export const ownerMenuItems = [
   {
@@ -83,6 +84,7 @@ export default function OwnerDashboard() {
   const [revenueByBranch, setRevenueByBranch] = useState([]);
   const [feedbacksList, setFeedbacksList] = useState([]);
   const [promotionsList, setPromotionsList] = useState([]);
+  const [showAddUser, setShowAddUser] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -124,23 +126,23 @@ export default function OwnerDashboard() {
           bookingAPI.getAllBookings(),
           branchAPI.getAllBranches()
         ]);
-        
+
         let branches = [];
         if (brRes.data?.success) {
-           branches = brRes.data.data;
+          branches = brRes.data.data;
         }
 
         if (bRes.data?.success) {
           const bookings = bRes.data.data;
-          
+
           let total = 0;
           const branchMap = {};
-          
+
           bookings.forEach((b) => {
             if (b.status === "completed" || b.status === "confirmed") {
               const amount = b.finalTotal || 0;
               total += amount;
-              
+
               const bId = typeof b.branchId === "object" ? b.branchId?._id : b.branchId;
               if (bId) {
                 if (!branchMap[bId]) branchMap[bId] = 0;
@@ -149,12 +151,12 @@ export default function OwnerDashboard() {
             }
           });
           setTotalRevenue(total);
-          
+
           const revenueList = branches.map(br => ({
-             name: br.name,
-             val: branchMap[br._id] || 0
+            name: br.name,
+            val: branchMap[br._id] || 0
           })).sort((a, b) => b.val - a.val);
-          
+
           setRevenueByBranch(revenueList);
         }
       } catch (err) {
@@ -227,6 +229,10 @@ export default function OwnerDashboard() {
             navigate("/roomtype");
             return;
           }
+          if (key === "adduser") {
+            setShowAddUser(true);
+            return;
+          }
           if (key === "news") {
             navigate("/news");
             return;
@@ -285,8 +291,8 @@ export default function OwnerDashboard() {
                       {m.label === "Doanh thu"
                         ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalRevenue)
                         : m.label === "Đánh giá TB"
-                        ? averageRating
-                        : m.value}
+                          ? averageRating
+                          : m.value}
                     </div>
                   </div>
                 ))}
@@ -357,6 +363,12 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
+      {showAddUser && (
+        <AddUserModal
+          onClose={() => setShowAddUser(false)}
+          onSuccess={() => alert("Thêm người dùng thành công!")}
+        />
+      )}
     </div>
   );
 }

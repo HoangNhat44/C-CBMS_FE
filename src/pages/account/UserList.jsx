@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import userAPI from "../../services/user.service";
 import roleAPI from "../../services/role.service";
-import UserForm from "./UserForm";
+import branchAPI from "../../services/branch.service";
+import AddUserModal from "./AddUserModal";
+import { useAuth } from "../../context/AuthContext";
 
 function getInitials(name = "") {
   return name
@@ -14,20 +16,24 @@ function getInitials(name = "") {
 }
 
 export default function UserList() {
+  const { user: currentUser } = useAuth();
   const [usersList, setUsersList] = useState([]);
   const [rolesList, setRolesList] = useState([]);
+  const [branchesList, setBranchesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const fetchUsersAndRoles = async () => {
     try {
       setLoading(true);
-      const [uRes, rRes] = await Promise.all([
+      const [uRes, rRes, bRes] = await Promise.all([
         userAPI.getAllUsers(),
-        roleAPI.getAllRoles()
+        roleAPI.getAllRoles(),
+        branchAPI.getAllBranches()
       ]);
       if (uRes.data?.success) setUsersList(uRes.data.data || []);
       if (rRes.data?.success) setRolesList(rRes.data.data || []);
+      if (bRes.data?.success) setBranchesList(bRes.data.data || []);
     } catch (err) {
       console.error("Fetch data failed", err);
     } finally {
@@ -61,26 +67,21 @@ export default function UserList() {
     }
   };
 
-  const handleCreateUser = async (data) => {
-    try {
-      const res = await userAPI.createUser(data);
-      if (res.data?.success) {
-        setShowAddForm(false);
-        fetchUsersAndRoles();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const activeUsersCount = usersList.filter(u => u.isActive).length;
   const lockedUsersCount = usersList.filter(u => !u.isActive).length;
 
   const metrics = [
     { icon: "ti-users",       label: "Tổng người dùng", value: usersList.length,  trend: "Thực tế",    up: true,  color: "#e11d48" },
-    { icon: "ti-user-check",  label: "Đang hoạt động",  value: activeUsersCount,  trend: "Thực tế",    up: true,  color: "#16a34a" },
     { icon: "ti-user-x",      label: "Bị khóa",         value: lockedUsersCount,     trend: "Thực tế",     up: false, color: "#f59e0b" },
   ];
+
+  const currentRoleName = currentUser?.role?.name?.toLowerCase() || currentUser?.roleId?.name?.toLowerCase() || "";
+  let allowedRoles = rolesList.filter(r => r.name?.toLowerCase() !== "admin");
+  if (currentRoleName === "staff") {
+    allowedRoles = allowedRoles.filter(r => r.name?.toLowerCase() === "customer");
+  } else if (currentRoleName === "owner") {
+    allowedRoles = allowedRoles.filter(r => ["customer", "staff"].includes(r.name?.toLowerCase()));
+  }
 
   if (loading) {
     return <div style={{ padding: 20 }}>Đang tải dữ liệu...</div>;
@@ -161,20 +162,31 @@ export default function UserList() {
                       style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--border)", fontSize: 13, cursor: "pointer", textTransform: "capitalize", background: "#fff" }}
                     >
                       <option value="" disabled>-- Chọn vai trò --</option>
-                      {rolesList.map((r) => (
-                        <option key={r._id} value={r._id}>{r.name}</option>
-                      ))}
+                      {rolesList.map((r) => {
+                        const isAllowed = allowedRoles.some(ar => ar._id === r._id);
+                        return (
+                          <option 
+                            key={r._id} 
+                            value={r._id} 
+                            disabled={!isAllowed}
+                          >
+                            {r.name}
+                          </option>
+                        );
+                      })}
                     </select>
                   </td>
                   <td><span className={`pill ${statusMap}`}>{statusText}</span></td>
                   <td style={{ textAlign: "right" }}>
-                    <button
-                      onClick={() => handleToggleState(u._id, u.isActive)}
-                      className="btn-outline"
-                      style={{ padding: "6px 12px", fontSize: 12, borderRadius: 6, cursor: "pointer", border: "1px solid var(--border)", fontWeight: 600, color: u.isActive ? "#b91c1c" : "#15803d", background: "#fff" }}
-                    >
-                      {u.isActive ? "Khóa tài khoản" : "Mở khóa"}
-                    </button>
+                    {currentUser && currentUser._id !== u._id && (
+                      <button
+                        onClick={() => handleToggleState(u._id, u.isActive)}
+                        className="btn-outline"
+                        style={{ padding: "6px 12px", fontSize: 12, borderRadius: 6, cursor: "pointer", border: "1px solid var(--border)", fontWeight: 600, color: u.isActive ? "#b91c1c" : "#15803d", background: "#fff" }}
+                      >
+                        {u.isActive ? "Khóa tài khoản" : "Mở khóa"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -185,16 +197,10 @@ export default function UserList() {
 
       {/* Add User Modal */}
       {showAddForm && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", overflow: "auto", padding: "20px 0" }}>
-          <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 600, position: "relative", padding: 24, margin: "auto" }}>
-            <button onClick={() => setShowAddForm(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "var(--text-muted)" }}>&times;</button>
-            <UserForm
-              roles={rolesList}
-              onSubmit={handleCreateUser}
-              onCancel={() => setShowAddForm(false)}
-            />
-          </div>
-        </div>
+        <AddUserModal
+          onClose={() => setShowAddForm(false)}
+          onSuccess={() => fetchUsersAndRoles()}
+        />
       )}
     </div>
   );

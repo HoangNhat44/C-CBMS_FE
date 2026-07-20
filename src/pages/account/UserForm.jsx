@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 
-export default function UserForm({ user, roles, onSubmit, onCancel }) {
+export default function UserForm({ user, roles, branches = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
     roleId: "",
+    branchId: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +18,7 @@ export default function UserForm({ user, roles, onSubmit, onCancel }) {
         email: user.email || "",
         phone: user.phone || "",
         roleId: user.roleId?._id || user.roleId || "",
+        branchId: user.branchId?._id || user.branchId || "",
         password: "", // Leave blank on edit, only send if user types it
       });
     } else {
@@ -25,10 +27,14 @@ export default function UserForm({ user, roles, onSubmit, onCancel }) {
         email: "",
         phone: "",
         roleId: roles.length > 0 ? roles[0]._id : "",
+        branchId: "",
         password: "",
       });
     }
   }, [user, roles]);
+
+  const selectedRole = roles?.find(r => r._id === formData.roleId);
+  const isStaff = selectedRole?.name?.toLowerCase() === "staff";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -41,6 +47,12 @@ export default function UserForm({ user, roles, onSubmit, onCancel }) {
     if (user && !dataToSubmit.password) {
       delete dataToSubmit.password; // Do not update password if not provided
     }
+    
+    // If not staff, remove branchId
+    if (!isStaff) {
+      delete dataToSubmit.branchId;
+    }
+
     onSubmit(dataToSubmit);
   };
 
@@ -89,21 +101,41 @@ export default function UserForm({ user, roles, onSubmit, onCancel }) {
           />
         </div>
 
-        <div className="form-group" style={{ marginBottom: 15 }}>
-          <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 13 }}>Vai trò (Phân quyền)</label>
-          <select
-            name="roleId"
-            value={formData.roleId}
-            onChange={handleChange}
-            style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8, backgroundColor: "#fff" }}
-            required
-          >
-            <option value="" disabled>-- Chọn vai trò --</option>
-            {roles.map((r) => (
-              <option key={r._id} value={r._id}>{r.name}</option>
-            ))}
-          </select>
-        </div>
+        {roles.length > 1 && (
+          <div className="form-group" style={{ marginBottom: 15 }}>
+            <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 13 }}>Vai trò (Phân quyền)</label>
+            <select
+              name="roleId"
+              value={formData.roleId}
+              onChange={handleChange}
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8, backgroundColor: "#fff" }}
+              required
+            >
+              <option value="" disabled>-- Chọn vai trò --</option>
+              {roles.map((r) => (
+                <option key={r._id} value={r._id}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {isStaff && (
+          <div className="form-group" style={{ marginBottom: 15 }}>
+            <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 13 }}>Chi nhánh (Bắt buộc cho Staff)</label>
+            <select
+              name="branchId"
+              value={formData.branchId}
+              onChange={handleChange}
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8, backgroundColor: "#fff" }}
+              required
+            >
+              <option value="" disabled>-- Chọn chi nhánh --</option>
+              {branches.map((b) => (
+                <option key={b._id} value={b._id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-group" style={{ marginBottom: 25 }}>
           <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 13 }}>
