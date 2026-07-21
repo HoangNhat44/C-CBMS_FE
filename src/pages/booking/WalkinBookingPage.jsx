@@ -874,7 +874,7 @@ export default function WalkinBookingPage() {
                                   >
                                     <div className="promo-card-item__info">
                                       <span className="promo-code">
-                                        🏷️ {promo.code || "Ưu đãi tự động"}
+                                        🏷️ {promo.title || "Ưu đãi tự động"} {promo.code ? `(${promo.code})` : ""}
                                       </span>
                                       <span className="promo-desc">
                                         {promo.description || `Giảm ${promo.discountType === 'percent' ? `${promo.discountValue}%` : formatCurrency(promo.discountValue)}`}
