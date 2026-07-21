@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import bookingAPI from "../../services/booking.service";
-import authAPI from "../../services/auth.service";
 import branchAPI from "../../services/branch.service";
 import Header from "../../components/Header";
 import Sidebar from "../../components/Sidebar";
@@ -12,15 +11,6 @@ import "../dashboard/Dashboard.css";
 import "./BookingHistoryPage.css";
 
 import { useAuth } from "../../context/AuthContext";
-
-function decodeToken(token) {
-  try {
-    const payload = token.split(".")[1];
-    return JSON.parse(atob(payload));
-  } catch {
-    return null;
-  }
-}
 
 
 
@@ -124,19 +114,19 @@ function BookingHistoryPage() {
   const getStatusText = (status) => {
     switch (status) {
       case "pending":
-        return "PENDING";
+        return "Chờ xác nhận";
       case "confirmed":
-        return "CONFIRMED";
+        return "Đã xác nhận";
       case "completed":
-        return "COMPLETED";
+        return "Hoàn thành";
       case "cancelled":
-        return "CANCELLED";
+        return "Đã hủy";
       case "refunded":
-        return "REFUNDED";
+        return "Đã hoàn tiền";
       case "request_refund":
-        return "REQUEST REFUND";
+        return "Yêu cầu hoàn tiền";
       default:
-        return status.toUpperCase();
+        return status;
     }
   };
 
@@ -177,31 +167,6 @@ function BookingHistoryPage() {
         <Sidebar
           menuItems={menuItems}
           active="bookinghistory"
-          setActive={(key) => {
-            if (roleName === "staff") {
-              if (key === "category") navigate("/categories");
-              else if (key === "product") navigate("/products");
-              else if (key === "review") navigate("/feedbacks");
-              else if (key === "bookinghistory") navigate("/bookinghistory");
-              else if (key === "walkin") navigate("/walkin");
-              else navigate("/staff-dashboard");
-            } else {
-              if (key === "bookinghistory") return;
-              if (key === "room") navigate("/room");
-              else if (key === "roomtype") navigate("/roomtype");
-              else if (key === "news") navigate("/news");
-              else if (key === "category") navigate("/categories");
-              else if (key === "product") navigate("/products");
-              else if (key === "review") navigate("/feedbacks");
-              else if (key === "facility") navigate("/branches");
-              else if (key === "slot") navigate("/slots");
-              else if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
-                navigate("/owner-dashboard", { state: { activeTab: key } });
-              } else {
-                navigate("/owner-dashboard");
-              }
-            }
-          }}
           handleLogout={handleLogout}
           onLogoClick={() => navigate(roleName === "staff" ? "/staff-dashboard" : "/owner-dashboard")}
         />

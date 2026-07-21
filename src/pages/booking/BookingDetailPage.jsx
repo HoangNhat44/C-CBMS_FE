@@ -298,6 +298,31 @@ function BookingDetailPage() {
     }
   };
 
+  const handleCancelRefundRequest = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn rút lại yêu cầu hoàn tiền không?\nĐơn đặt phòng của bạn sẽ được khôi phục về trạng thái 'Đã xác nhận'.")) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await refundAPI.cancelRefundRequest(bookingId);
+      if (res.data?.success) {
+        alert(res.data.message || "Rút lại yêu cầu hoàn tiền thành công!");
+        // Reload details
+        const updatedBooking = await bookingAPI.getBookingById(bookingId);
+        if (updatedBooking.data?.success) {
+          setBooking(updatedBooking.data.data);
+        }
+        setRefund(null);
+      }
+    } catch (err) {
+      console.error("Cancel refund error:", err);
+      alert("Rút lại yêu cầu thất bại: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     if (!feedbackRating) {
@@ -387,7 +412,7 @@ function BookingDetailPage() {
   const getStatusLabel = (status) => {
     switch (status) {
       case "pending":
-        return { text: "CHỜ XỬ LÝ", className: "status-tag--pending" };
+        return { text: "CHỜ XÁC NHẬN", className: "status-tag--pending" };
       case "confirmed":
         return { text: "ĐÃ XÁC NHẬN", className: "status-tag--confirmed" };
       case "completed":
@@ -789,6 +814,17 @@ function BookingDetailPage() {
                           {submitting ? "Đang xử lý..." : "💳 Xác nhận hoàn tiền"}
                         </button>
                       )}
+                      {booking.status === "request_refund" && refund?.status === "pending" && roleName !== "owner" && roleName !== "staff" && (
+                        <button
+                          type="button"
+                          className="detail-action-btn detail-action-btn--cancel"
+                          style={{ backgroundColor: "#ea580c", borderColor: "#ea580c" }}
+                          onClick={handleCancelRefundRequest}
+                          disabled={submitting}
+                        >
+                          {submitting ? "Đang xử lý..." : "🔄 Rút lại yêu cầu hoàn tiền"}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -804,7 +840,7 @@ function BookingDetailPage() {
               <div className="info-box-rows">
                 <div className="info-box-row">
                   <span>Trạng thái yêu cầu:</span>
-                  <strong>{refund.status === "pending" ? "ĐANG CHỜ DUYỆT" : refund.status === "refunded" ? "ĐÃ HOÀN TIỀN" : refund.status.toUpperCase()}</strong>
+                  <strong>{refund.status === "pending" ? "ĐANG CHỜ DUYỆT" : refund.status === "refunded" ? "ĐÃ HOÀN TIỀN" : refund.status === "cancelled" ? "ĐÃ HỦY YÊU CẦU" : refund.status.toUpperCase()}</strong>
                 </div>
                 <div className="info-box-row">
                   <span>Số tiền hoàn trả:</span>
@@ -824,6 +860,33 @@ function BookingDetailPage() {
                   <div className="info-box-row flex-col">
                     <span>Ảnh minh chứng chuyển khoản:</span>
                     <img src={refund.proofImage} alt="Chứng từ hoàn tiền" className="refund-proof-img" />
+                  </div>
+                )}
+                {refund.status === "pending" && roleName !== "owner" && roleName !== "staff" && (
+                  <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed #e5e7eb" }}>
+                    <button
+                      type="button"
+                      onClick={handleCancelRefundRequest}
+                      disabled={submitting}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#ea580c",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontWeight: "600",
+                        fontSize: "0.88rem",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      🔄 Rút lại yêu cầu hoàn tiền này
+                    </button>
+                    <p style={{ margin: "6px 0 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+                      * Bấm vào đây nếu bạn bấm nhầm hoặc thay đổi ý định. Đơn phòng sẽ được khôi phục về trạng thái "Đã xác nhận".
+                    </p>
                   </div>
                 )}
               </div>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import roomTypeAPI from "../../services/roomType.service";
 import "./Dashboard.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+
 const features = [
   { icon: "ti-shield-check", title: "Xác nhận nhanh chóng", desc: "Nhận xác nhận đặt phòng ngay lập tức" },
   { icon: "ti-calendar-x", title: "Hủy/đổi linh hoạt", desc: "Dễ dàng hủy hoặc đổi lịch theo quy định" },
@@ -17,16 +17,9 @@ const highlights = [
   { icon: "ti-coffee", title: "Dịch vụ tiện ích", desc: "Cà phê, snack, tiện nghi" },
 ];
 
-const timeSlots = ["08:00 - 10:00", "10:00 - 12:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00", "19:00 - 21:00"];
-
 export default function LandingPage() {
-  const [date, setDate] = useState("16/06/2025");
-  const [slot, setSlot] = useState("10:00 - 12:00");
-  const [people, setPeople] = useState("2 người");
-  const [type, setType] = useState("Tất cả");
   const [rooms, setRooms] = useState([]);
   const [showAll, setShowAll] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -116,9 +109,9 @@ export default function LandingPage() {
             <div className="sec-title">Khám phá không gian</div>
             <p>Đa dạng loại phòng phù hợp với nhu cầu của bạn</p>
           </div>
-          <a href="#" className="rooms-all" onClick={(e) => { e.preventDefault(); setShowAll(!showAll); }}>
+          <button type="button" className="rooms-all" onClick={() => setShowAll(!showAll)} style={{ background: "none", border: "none", cursor: "pointer" }}>
             {showAll ? "Thu gọn ←" : "Xem tất cả phòng →"}
-          </a>
+          </button>
         </div>
         <div className="rooms-grid">
           {(showAll ? rooms : rooms.slice(0, 4)).map((r) => {

@@ -202,51 +202,6 @@ function FeedbacksPage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "review") return;
-    if (key === "category") {
-      navigate("/categories");
-      return;
-    }
-    if (key === "product") {
-      navigate("/products");
-      return;
-    }
-    if (key === "bookinghistory") {
-      navigate("/bookinghistory");
-      return;
-    }
-    if (key === "walkin") {
-      navigate("/walkin");
-      return;
-    }
-    if (key === "room") {
-      navigate("/room");
-      return;
-    }
-    if (key === "roomtype") {
-      navigate("/roomtype");
-      return;
-    }
-    if (key === "news") {
-      navigate("/news");
-      return;
-    }
-    if (key === "facility") {
-      navigate("/branches");
-      return;
-    }
-    if (key === "slot") {
-      navigate("/slots");
-      return;
-    }
-    if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
-      navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard", { state: { activeTab: key } });
-      return;
-    }
-    navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
-  };
-
   // Delete feedback (Staff / Owner only)
   const handleDeleteFeedback = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa phản hồi này vĩnh viễn? Thao tác này không thể hoàn tác.")) {
@@ -360,7 +315,6 @@ function FeedbacksPage() {
         <Sidebar
           menuItems={isStaff ? staffMenuItems : ownerMenuItems}
           active="review"
-          setActive={handleMenuChange}
           handleLogout={handleLogout}
           onLogoClick={() => navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard")}
         />

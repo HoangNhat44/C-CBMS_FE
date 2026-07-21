@@ -83,21 +83,6 @@ export default function RoomTypePage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "roomtype") return;
-    if (key === "room") { navigate("/room"); return; }
-    else if (key === "news") { navigate("/news"); return; }
-    else if (key === "category") { navigate("/categories"); return; }
-    else if (key === "product") { navigate("/products"); return; }
-    else if (key === "review") { navigate("/feedbacks"); return; }
-    else if (key === "bookinghistory") { navigate("/bookinghistory"); return; }
-    else if (key === "facility") { navigate("/branches"); return; }
-    else if (key === "slot") { navigate("/slots"); return; }
-    else {
-      navigate("/owner-dashboard", { state: { activeTab: key } });
-    }
-  };
-
   const openCreateForm = () => {
     setEditingRoomType(null);
     setFormData(emptyForm);
@@ -228,7 +213,6 @@ export default function RoomTypePage() {
       <Sidebar
         menuItems={ownerMenuItems}
         active="roomtype"
-        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate("/owner-dashboard")}
       />

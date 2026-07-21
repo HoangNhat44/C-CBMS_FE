@@ -156,51 +156,6 @@ function ProductsPage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "product") return;
-    if (key === "category") {
-      navigate("/categories");
-      return;
-    }
-    if (key === "review") {
-      navigate("/feedbacks");
-      return;
-    }
-    if (key === "bookinghistory") {
-      navigate("/bookinghistory");
-      return;
-    }
-    if (key === "walkin") {
-      navigate("/walkin");
-      return;
-    }
-    if (key === "room") {
-      navigate("/room");
-      return;
-    }
-    if (key === "roomtype") {
-      navigate("/roomtype");
-      return;
-    }
-    if (key === "news") {
-      navigate("/news");
-      return;
-    }
-    if (key === "facility") {
-      navigate("/branches");
-      return;
-    }
-    if (key === "slot") {
-      navigate("/slots");
-      return;
-    }
-    if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
-      navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard", { state: { activeTab: key } });
-      return;
-    }
-    navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard");
-  };
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -335,7 +290,6 @@ function ProductsPage() {
       <Sidebar
         menuItems={isStaff ? staffMenuItems : ownerMenuItems}
         active="product"
-        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate(isStaff ? "/staff-dashboard" : "/owner-dashboard")}
       />

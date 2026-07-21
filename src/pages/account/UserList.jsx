@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import userAPI from "../../services/user.service";
 import roleAPI from "../../services/role.service";
-import branchAPI from "../../services/branch.service";
 import AddUserModal from "./AddUserModal";
 import { useAuth } from "../../context/AuthContext";
 
@@ -19,21 +18,18 @@ export default function UserList() {
   const { user: currentUser } = useAuth();
   const [usersList, setUsersList] = useState([]);
   const [rolesList, setRolesList] = useState([]);
-  const [branchesList, setBranchesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const fetchUsersAndRoles = async () => {
     try {
       setLoading(true);
-      const [uRes, rRes, bRes] = await Promise.all([
+      const [uRes, rRes] = await Promise.all([
         userAPI.getAllUsers(),
-        roleAPI.getAllRoles(),
-        branchAPI.getAllBranches()
+        roleAPI.getAllRoles()
       ]);
       if (uRes.data?.success) setUsersList(uRes.data.data || []);
       if (rRes.data?.success) setRolesList(rRes.data.data || []);
-      if (bRes.data?.success) setBranchesList(bRes.data.data || []);
     } catch (err) {
       console.error("Fetch data failed", err);
     } finally {
@@ -71,8 +67,9 @@ export default function UserList() {
   const lockedUsersCount = usersList.filter(u => !u.isActive).length;
 
   const metrics = [
-    { icon: "ti-users",       label: "Tổng người dùng", value: usersList.length,  trend: "Thực tế",    up: true,  color: "#e11d48" },
-    { icon: "ti-user-x",      label: "Bị khóa",         value: lockedUsersCount,     trend: "Thực tế",     up: false, color: "#f59e0b" },
+    { icon: "ti-users",       label: "Tổng người dùng", value: usersList.length,    trend: "Thực tế", up: true,  color: "#e11d48" },
+    { icon: "ti-user-check",  label: "Hoạt động",       value: activeUsersCount,     trend: "Thực tế", up: true,  color: "#10b981" },
+    { icon: "ti-user-x",      label: "Bị khóa",         value: lockedUsersCount,     trend: "Thực tế", up: false, color: "#f59e0b" },
   ];
 
   const currentRoleName = currentUser?.role?.name?.toLowerCase() || currentUser?.roleId?.name?.toLowerCase() || "";

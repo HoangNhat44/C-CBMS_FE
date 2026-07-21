@@ -23,6 +23,7 @@ import CategoriesPage from "./pages/category/CategoriesPage";
 import FeedbacksPage from "./pages/feedback/FeedbacksPage";
 import BranchesPage from "./pages/branch/BranchesPage";
 import SlotsPage from "./pages/slot/SlotsPage";
+import RoomPricePage from "./pages/roomPrice/RoomPricePage";
 import MyProfilePage from "./pages/profile/MyProfilePage";
 import PublicNewsPage from "./pages/news/PublicNewsPage";
 
@@ -79,6 +80,7 @@ function App() {
             <Route path="/roomtype" element={<RoomTypePage />} />
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/slots" element={<SlotsPage />} />
+            <Route path="/room-prices" element={<RoomPricePage />} />
           </Route>
 
           <Route element={<ProtectedRoute requiredPermissions={["CREATE_NEWS", "UPDATE_NEWS", "DELETE_NEWS"]} />}>

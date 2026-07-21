@@ -103,22 +103,6 @@ export default function SlotsPage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "slot") return;
-    if (key === "room") navigate("/room");
-    else if (key === "roomtype") navigate("/roomtype");
-    else if (key === "news") navigate("/news");
-    else if (key === "category") navigate("/categories");
-    else if (key === "product") navigate("/products");
-    else if (key === "review") navigate("/feedbacks");
-    else if (key === "bookinghistory") navigate("/bookinghistory");
-    else if (key === "facility") navigate("/branches");
-    else if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
-      navigate("/owner-dashboard", { state: { activeTab: key } });
-    }
-    else navigate("/owner-dashboard");
-  };
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -153,6 +137,37 @@ export default function SlotsPage() {
     setError("");
     setSuccess("");
 
+    const timeToMinutes = (tStr) => {
+      if (!tStr) return 0;
+      const [h, m] = tStr.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const startMin = timeToMinutes(form.startTime);
+    const endMin = timeToMinutes(form.endTime);
+
+    if (startMin >= endMin) {
+      setError("Giờ bắt đầu phải nhỏ hơn giờ kết thúc (ví dụ: 08:00 - 10:00).");
+      setSubmitting(false);
+      return;
+    }
+
+    // Check overlap with existing slots
+    const overlappingSlot = slots.find((s) => {
+      if (modalType === "edit" && s._id === editingId) return false;
+      const sMin = timeToMinutes(s.startTime);
+      const eMin = timeToMinutes(s.endTime);
+      return startMin < eMin && endMin > sMin;
+    });
+
+    if (overlappingSlot) {
+      setError(
+        `Khung giờ (${form.startTime} - ${form.endTime}) bị trùng/gối lên khung giờ "${overlappingSlot.name}" (${overlappingSlot.startTime} - ${overlappingSlot.endTime}). Vui lòng chọn thời gian khác!`
+      );
+      setSubmitting(false);
+      return;
+    }
+
     try {
       if (modalType === "add") {
         const res = await slotAPI.createSlot(form);
@@ -164,8 +179,6 @@ export default function SlotsPage() {
           setError(res.data?.message || "Lỗi khi tạo mới khung giờ.");
         }
       } else {
-        // Under the rules, only name, timeType, and isActive are updated.
-        // We submit the form object, and the backend filters out changes to times.
         const res = await slotAPI.updateSlot(editingId, form);
         if (res.data?.success) {
           setSuccess("Cập nhật thông tin khung giờ thành công!");
@@ -177,7 +190,7 @@ export default function SlotsPage() {
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Khung giờ slot này đã tồn tại, không thể tạo trùng.");
+      setError(err.response?.data?.message || "Lỗi khi lưu thông tin khung giờ.");
     } finally {
       setSubmitting(false);
     }
@@ -205,6 +218,14 @@ export default function SlotsPage() {
     }
   };
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
   // Filtered slots list
   const filteredSlots = slots.filter((slot) => {
     const matchesSearch =
@@ -219,12 +240,15 @@ export default function SlotsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(filteredSlots.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedSlots = filteredSlots.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="dash">
       <Sidebar
         menuItems={ownerMenuItems}
         active="slot"
-        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate("/owner-dashboard")}
       />
@@ -288,7 +312,7 @@ export default function SlotsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSlots.map((slot) => (
+                  {paginatedSlots.map((slot) => (
                     <tr key={slot._id}>
                       <td className="font-semibold">{slot.name}</td>
                       <td className="time-range-display">⏰ {slot.startTime} - {slot.endTime}</td>
@@ -322,6 +346,52 @@ export default function SlotsPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              {filteredSlots.length > 0 && (
+                <div className="pagination-container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", background: "#ffffff", borderTop: "1px solid #f1f5f9", flexWrap: "wrap", gap: "12px" }}>
+                  <div style={{ fontSize: "0.88rem", color: "#64748b", fontWeight: 600 }}>
+                    Hiển thị <strong>{startIndex + 1}</strong> - <strong>{Math.min(startIndex + itemsPerPage, filteredSlots.length)}</strong> trên tổng <strong>{filteredSlots.length}</strong> khung giờ
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", background: currentPage === 1 ? "#f1f5f9" : "#ffffff", color: currentPage === 1 ? "#94a3b8" : "#334e68", cursor: currentPage === 1 ? "not-allowed" : "pointer", fontWeight: 700, fontSize: "0.85rem" }}
+                    >
+                      ← Trang trước
+                    </button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border: "1px solid",
+                          borderColor: currentPage === page ? "#0f766e" : "#cbd5e1",
+                          background: currentPage === page ? "#0f766e" : "#ffffff",
+                          color: currentPage === page ? "#ffffff" : "#334e68",
+                          fontWeight: 700,
+                          fontSize: "0.85rem",
+                          cursor: "pointer"
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ))}
+
+                    <button
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", background: (currentPage === totalPages || totalPages === 0) ? "#f1f5f9" : "#ffffff", color: (currentPage === totalPages || totalPages === 0) ? "#94a3b8" : "#334e68", cursor: (currentPage === totalPages || totalPages === 0) ? "not-allowed" : "pointer", fontWeight: 700, fontSize: "0.85rem" }}
+                    >
+                      Trang sau →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

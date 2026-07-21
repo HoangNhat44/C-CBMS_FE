@@ -342,9 +342,9 @@ export default function WalkinBookingPage() {
   const handleTogglePromotion = (promoId) => {
     setSelectedPromotions((prev) => {
       if (prev.includes(promoId)) {
-        return prev.filter((id) => id !== promoId);
+        return [];
       } else {
-        return [...prev, promoId];
+        return [promoId];
       }
     });
   };
@@ -375,7 +375,7 @@ export default function WalkinBookingPage() {
           return prev;
         });
 
-        setSelectedPromotions((prev) => [...prev, promo._id]);
+        setSelectedPromotions([promo._id]);
         setPromoSuccess(`Áp dụng mã ${promo.code} thành công!`);
         setPromoCodeInput("");
       } else {

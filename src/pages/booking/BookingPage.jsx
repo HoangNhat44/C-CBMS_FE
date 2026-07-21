@@ -59,6 +59,54 @@ const abbreviatePrice = (value) => {
   return value;
 };
 
+// Helper to extract valid image URL from room (array or string) or fallback to roomType image
+const getRoomImageUrl = (room, roomType) => {
+  if (room && room.image) {
+    if (Array.isArray(room.image) && room.image.length > 0 && room.image[0]) {
+      return room.image[0];
+    }
+    if (typeof room.image === "string" && room.image.trim() !== "") {
+      return room.image;
+    }
+  }
+  if (roomType && roomType.image) {
+    if (Array.isArray(roomType.image) && roomType.image.length > 0 && roomType.image[0]) {
+      return roomType.image[0];
+    }
+    if (typeof roomType.image === "string" && roomType.image.trim() !== "") {
+      return roomType.image;
+    }
+  }
+  return "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400";
+};
+
+// Helper to extract all images from room for gallery view
+const getRoomImageGallery = (room, roomType) => {
+  const images = [];
+  if (room && room.image) {
+    if (Array.isArray(room.image)) {
+      room.image.forEach((img) => {
+        if (img && typeof img === "string" && img.trim() !== "") images.push(img);
+      });
+    } else if (typeof room.image === "string" && room.image.trim() !== "") {
+      images.push(room.image);
+    }
+  }
+  if (images.length === 0 && roomType && roomType.image) {
+    if (Array.isArray(roomType.image)) {
+      roomType.image.forEach((img) => {
+        if (img && typeof img === "string" && img.trim() !== "") images.push(img);
+      });
+    } else if (typeof roomType.image === "string" && roomType.image.trim() !== "") {
+      images.push(roomType.image);
+    }
+  }
+  if (images.length === 0) {
+    images.push("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400");
+  }
+  return images;
+};
+
 function BookingPage() {
   const navigate = useNavigate();
   const [branches, setBranches] = useState([]);
@@ -95,6 +143,21 @@ function BookingPage() {
   // QR Modal States
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [qrData, setQrData] = useState({ qrCode: "", checkoutUrl: "", amount: 0, bookingId: "" });
+
+  // Room Detail Modal States
+  const [isRoomDetailModalOpen, setIsRoomDetailModalOpen] = useState(false);
+  const [selectedDetailRoom, setSelectedDetailRoom] = useState(null);
+
+  const handleOpenRoomDetail = (roomType, room) => {
+    const activeBranch = branches.find((b) => b._id === selectedBranchId);
+    setSelectedDetailRoom({
+      roomType,
+      room,
+      branchName: activeBranch ? activeBranch.name : "Cinema Cafe",
+      branchAddress: activeBranch ? activeBranch.address : "",
+    });
+    setIsRoomDetailModalOpen(true);
+  };
 
   // Promotion States
   const [promotions, setPromotions] = useState([]);
@@ -355,9 +418,9 @@ function BookingPage() {
   const handleTogglePromotion = (promoId) => {
     setSelectedPromotions((prev) => {
       if (prev.includes(promoId)) {
-        return prev.filter((id) => id !== promoId);
+        return [];
       } else {
-        return [...prev, promoId];
+        return [promoId];
       }
     });
   };
@@ -390,8 +453,8 @@ function BookingPage() {
           return prev;
         });
 
-        // Select it
-        setSelectedPromotions((prev) => [...prev, promo._id]);
+        // Select ONLY this single promotion
+        setSelectedPromotions([promo._id]);
         setPromoSuccess(`Áp dụng mã ${promo.code} thành công!`);
         setPromoCodeInput("");
       } else {
@@ -586,19 +649,25 @@ function BookingPage() {
                       <div key={room.roomId} className="room-card">
                         <div className="room-card__visual">
                           <img
-                            src={
-                              categoryObj.roomType.image ||
-                              "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=400"
-                            }
-                            alt={categoryObj.roomType.name}
+                            src={getRoomImageUrl(room, categoryObj.roomType)}
+                            alt={room.roomName || categoryObj.roomType.name}
                           />
                           <span className="room-visual__badge">
-                            Max {categoryObj.roomType.capacity} người
+                            Max {room.capacity || categoryObj.roomType.capacity} người
                           </span>
                         </div>
 
                         <div className="room-card__details">
-                          <h4 className="room-card__name">{categoryObj.roomType.name}</h4>
+                          <div className="room-card__header">
+                            <h4 className="room-card__name">{room.roomName || categoryObj.roomType.name}</h4>
+                            <button
+                              type="button"
+                              className="btn-room-detail"
+                              onClick={() => handleOpenRoomDetail(categoryObj.roomType, room)}
+                            >
+                              👁 Xem chi tiết
+                            </button>
+                          </div>
                           
                           <div className="slots-grid">
                             {room.slots.map((slot) => {
@@ -960,6 +1029,135 @@ function BookingPage() {
           navigate("/bookinghistory");
         }}
       />
+
+      {/* Room Detail Modal */}
+      {isRoomDetailModalOpen && selectedDetailRoom && (
+        <div className="room-detail-modal-overlay" onClick={() => setIsRoomDetailModalOpen(false)}>
+          <div className="room-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <header className="room-detail-modal__header">
+              <div className="modal-header-title">
+                <h3>Chi Tiết Phòng</h3>
+                <span className="room-subtitle">{selectedDetailRoom.room.roomName || selectedDetailRoom.roomType.name}</span>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsRoomDetailModalOpen(false)}
+              >
+                &times;
+              </button>
+            </header>
+
+            <div className="room-detail-modal__body">
+              {(() => {
+                const gallery = getRoomImageGallery(selectedDetailRoom.room, selectedDetailRoom.roomType);
+                const mainImage = gallery[0];
+                return (
+                  <div className="room-detail-modal__gallery-wrap">
+                    <div className="room-detail-modal__visual">
+                      <img
+                        src={mainImage}
+                        alt={selectedDetailRoom.room.roomName || selectedDetailRoom.roomType.name}
+                      />
+                      <span className="room-detail-badge">
+                        👥 Sức chứa: Max {selectedDetailRoom.room.capacity || selectedDetailRoom.roomType.capacity} người
+                      </span>
+                    </div>
+                    {gallery.length > 1 && (
+                      <div className="room-gallery-thumbnails">
+                        {gallery.map((imgUrl, imgIdx) => (
+                          <img
+                            key={imgIdx}
+                            src={imgUrl}
+                            alt={`Hình ảnh phòng ${imgIdx + 1}`}
+                            className="gallery-thumb"
+                            onClick={(e) => {
+                              const mainImg = e.currentTarget.closest('.room-detail-modal__gallery-wrap').querySelector('.room-detail-modal__visual img');
+                              if (mainImg) mainImg.src = imgUrl;
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="room-detail-modal__info">
+                <div className="detail-item-group">
+                  <div className="detail-item">
+                    <span className="detail-label">Tên phòng:</span>
+                    <strong className="detail-value highlight-value">
+                      {selectedDetailRoom.room.roomName || selectedDetailRoom.roomType.name}
+                    </strong>
+                  </div>
+
+                  <div className="detail-item">
+                    <span className="detail-label">Hạng phòng (Loại phòng):</span>
+                    <strong className="detail-value">{selectedDetailRoom.roomType.name}</strong>
+                  </div>
+                </div>
+
+                {selectedDetailRoom.roomType.description && (
+                  <div className="detail-item">
+                    <span className="detail-label">Mô tả hạng phòng:</span>
+                    <p className="detail-desc">{selectedDetailRoom.roomType.description}</p>
+                  </div>
+                )}
+
+                <div className="detail-item">
+                  <span className="detail-label">Sức chứa tối đa:</span>
+                  <span className="detail-tag capacity-tag">
+                    Max {selectedDetailRoom.room.capacity || selectedDetailRoom.roomType.capacity} người
+                  </span>
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Cơ sở / Chi nhánh:</span>
+                  <div className="branch-detail-box">
+                    <strong>📍 {selectedDetailRoom.branchName}</strong>
+                    <small>{selectedDetailRoom.branchAddress}</small>
+                  </div>
+                </div>
+
+                <div className="detail-item">
+                  <span className="detail-label">Tiện ích trang bị sẵn:</span>
+                  <div className="facilities-grid">
+                    {(
+                      (Array.isArray(selectedDetailRoom.room.facilities) && selectedDetailRoom.room.facilities.length > 0)
+                        ? selectedDetailRoom.room.facilities
+                        : (typeof selectedDetailRoom.room.facilities === "string" && selectedDetailRoom.room.facilities.trim() !== "")
+                        ? selectedDetailRoom.room.facilities.split(",").map((f) => f.trim())
+                        : [
+                            "Màn chiếu HD 4K",
+                            "Ghế Sofa cao cấp",
+                            "Hệ thống âm thanh vòm Surround",
+                            "Điều hòa 2 chiều",
+                            "Wifi tốc độ cao",
+                            "Không gian cách âm riêng tư"
+                          ]
+                    ).map((fac, idx) => (
+                      <span key={idx} className="facility-chip">
+                        ✨ {fac}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <footer className="room-detail-modal__footer">
+              <button
+                type="button"
+                className="btn-modal-close"
+                onClick={() => setIsRoomDetailModalOpen(false)}
+              >
+                Đóng
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </main>
     </>
   );

@@ -78,21 +78,6 @@ export default function NewsPage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "news") return;
-    if (key === "room") { navigate("/room"); return; }
-    else if (key === "roomtype") { navigate("/roomtype"); return; }
-    else if (key === "category") { navigate("/categories"); return; }
-    else if (key === "product") { navigate("/products"); return; }
-    else if (key === "review") { navigate("/feedbacks"); return; }
-    else if (key === "bookinghistory") { navigate("/bookinghistory"); return; }
-    else if (key === "facility") { navigate("/branches"); return; }
-    else if (key === "slot") { navigate("/slots"); return; }
-    else {
-      navigate("/owner-dashboard", { state: { activeTab: key } });
-    }
-  };
-
   const openCreateForm = () => {
     setEditingNews(null);
     setFormData(emptyForm);
@@ -173,7 +158,6 @@ export default function NewsPage() {
       <Sidebar
         menuItems={ownerMenuItems}
         active="news"
-        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate("/owner-dashboard")}
       />

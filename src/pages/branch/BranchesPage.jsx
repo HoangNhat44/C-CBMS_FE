@@ -105,22 +105,6 @@ export default function BranchesPage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "facility") return;
-    if (key === "room") navigate("/room");
-    else if (key === "roomtype") navigate("/roomtype");
-    else if (key === "news") navigate("/news");
-    else if (key === "category") navigate("/categories");
-    else if (key === "product") navigate("/products");
-    else if (key === "review") navigate("/feedbacks");
-    else if (key === "bookinghistory") navigate("/bookinghistory");
-    else if (key === "slot") navigate("/slots");
-    else if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
-      navigate("/owner-dashboard", { state: { activeTab: key } });
-    }
-    else navigate("/owner-dashboard");
-  };
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -262,7 +246,6 @@ export default function BranchesPage() {
       <Sidebar
         menuItems={ownerMenuItems}
         active="facility"
-        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate("/owner-dashboard")}
       />

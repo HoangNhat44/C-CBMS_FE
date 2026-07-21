@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import "./Dashboard.css";
 import Sidebar from "../../components/Sidebar";
@@ -28,6 +28,7 @@ export const ownerMenuItems = [
       { icon: "ti-layout-grid", label: "Quản lý loại phòng", key: "roomtype", child: true },
       { icon: "ti-door", label: "Quản lý phòng", key: "room", child: true },
       { icon: "ti-clock", label: "Quản lý slot", key: "slot" },
+      { icon: "ti-coin", label: "Quản lý giá phòng", key: "roomprice" },
     ],
   },
   {
@@ -46,7 +47,6 @@ export const ownerMenuItems = [
     items: [
       { icon: "ti-category", label: "Quản lý danh mục", key: "category" },
       { icon: "ti-package", label: "Quản lý sản phẩm", key: "product" },
-      { icon: "ti-sparkles", label: "Dịch vụ đi kèm", key: "service" },
     ],
   },
   {
@@ -55,16 +55,6 @@ export const ownerMenuItems = [
   },
 ];
 
-const metrics = [
-  { icon: "ti-coin", label: "Doanh thu", value: "84.2M", trend: "+12%", up: true, color: "#4f8ef7" },
-  { icon: "ti-star", label: "Đánh giá TB", value: "4.6", trend: "+0.2", up: true, color: "#8b5cf6" },
-];
-
-
-
-
-
-// Decode JWT payload (không cần verify, chỉ lấy thông tin hiển thị)
 function decodeToken(token) {
   try {
     const payload = token.split(".")[1];
@@ -74,24 +64,33 @@ function decodeToken(token) {
   }
 }
 
+const formatVND = (val) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val || 0);
 
 export default function OwnerDashboard() {
   const { hasPermission } = useAuth();
   const [active, setActive] = useState("revenue");
   const [totalCustomers, setTotalCustomers] = useState(0);
-  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [allBookings, setAllBookings] = useState([]);
+  const [branchesList, setBranchesList] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
-  const [revenueByBranch, setRevenueByBranch] = useState([]);
   const [feedbacksList, setFeedbacksList] = useState([]);
   const [promotionsList, setPromotionsList] = useState([]);
   const [showAddUser, setShowAddUser] = useState(false);
+
+  // Time Range Filter for Revenue ("month" | "today" | "all")
+  const [timeFilter, setTimeFilter] = useState("month");
 
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     if (location.state?.activeTab) {
-      setActive(location.state.activeTab);
+      if (location.state.activeTab === "adduser") {
+        setShowAddUser(true);
+      } else {
+        setActive(location.state.activeTab);
+      }
     }
   }, [location.state]);
 
@@ -120,44 +119,19 @@ export default function OwnerDashboard() {
       }
     };
 
-    const fetchRevenue = async () => {
+    const fetchRevenueAndBranches = async () => {
       try {
         const [bRes, brRes] = await Promise.all([
           bookingAPI.getAllBookings(),
           branchAPI.getAllBranches()
         ]);
 
-        let branches = [];
         if (brRes.data?.success) {
-          branches = brRes.data.data;
+          setBranchesList(brRes.data.data || []);
         }
 
         if (bRes.data?.success) {
-          const bookings = bRes.data.data;
-
-          let total = 0;
-          const branchMap = {};
-
-          bookings.forEach((b) => {
-            if (b.status === "completed" || b.status === "confirmed") {
-              const amount = b.finalTotal || 0;
-              total += amount;
-
-              const bId = typeof b.branchId === "object" ? b.branchId?._id : b.branchId;
-              if (bId) {
-                if (!branchMap[bId]) branchMap[bId] = 0;
-                branchMap[bId] += amount;
-              }
-            }
-          });
-          setTotalRevenue(total);
-
-          const revenueList = branches.map(br => ({
-            name: br.name,
-            val: branchMap[br._id] || 0
-          })).sort((a, b) => b.val - a.val);
-
-          setRevenueByBranch(revenueList);
+          setAllBookings(bRes.data.data || []);
         }
       } catch (err) {
         console.error("Fetch revenue failed", err);
@@ -168,7 +142,7 @@ export default function OwnerDashboard() {
       try {
         const fRes = await feedbackAPI.getAllFeedbacks();
         if (fRes.data?.success) {
-          const feedbacks = fRes.data.data;
+          const feedbacks = fRes.data.data || [];
           setFeedbacksList(feedbacks);
           if (feedbacks.length > 0) {
             const sum = feedbacks.reduce((acc, f) => acc + (f.rating || 0), 0);
@@ -186,7 +160,7 @@ export default function OwnerDashboard() {
       try {
         const pRes = await promotionAPI.getAllPromotions();
         if (pRes.success) {
-          setPromotionsList(pRes.data);
+          setPromotionsList(pRes.data || []);
         }
       } catch (err) {
         console.error("Fetch promotions failed", err);
@@ -194,17 +168,89 @@ export default function OwnerDashboard() {
     };
 
     fetchCustomers();
-    fetchRevenue();
+    fetchRevenueAndBranches();
     fetchFeedbacks();
     fetchPromotions();
   }, []);
 
-
   const handleLogout = () => {
     localStorage.removeItem("token");
-
     navigate("/login", { replace: true });
   };
+
+  // Filter Bookings by Selected Time Filter
+  const filteredBookings = useMemo(() => {
+    const today = new Date();
+    return allBookings.filter((b) => {
+      if (b.status !== "completed" && b.status !== "confirmed") return false;
+      const bDate = new Date(b.bookingDate || b.createdAt);
+
+      if (timeFilter === "today") {
+        return (
+          today.getFullYear() === bDate.getFullYear() &&
+          today.getMonth() === bDate.getMonth() &&
+          today.getDate() === bDate.getDate()
+        );
+      }
+      if (timeFilter === "month") {
+        return (
+          today.getFullYear() === bDate.getFullYear() &&
+          today.getMonth() === bDate.getMonth()
+        );
+      }
+      return true; // "all"
+    });
+  }, [allBookings, timeFilter]);
+
+  // Aggregate Stats
+  const { grandTotal, roomTotalSum, productTotalSum, branchRevenueMap, topBookings } = useMemo(() => {
+    let grandTotal = 0;
+    let roomTotalSum = 0;
+    let productTotalSum = 0;
+    const branchRevenueMap = {};
+
+    filteredBookings.forEach((b) => {
+      const amount = b.finalTotal || b.totalAmount || 0;
+      grandTotal += amount;
+
+      const roomPart = b.roomTotal || b.roomPriceSnapshots?.reduce((acc, p) => acc + (p.price || 0), 0) || amount;
+      const prodPart = b.productTotal || (amount - roomPart > 0 ? amount - roomPart : 0);
+
+      roomTotalSum += roomPart;
+      productTotalSum += prodPart;
+
+      const bId = typeof b.branchId === "object" ? b.branchId?._id : b.branchId;
+      if (bId) {
+        if (!branchRevenueMap[bId]) {
+          branchRevenueMap[bId] = { amount: 0, count: 0, name: b.branchId?.name || "Chi nhánh" };
+        }
+        branchRevenueMap[bId].amount += amount;
+        branchRevenueMap[bId].count += 1;
+      }
+    });
+
+    const topBookings = [...filteredBookings]
+      .sort((a, b) => (b.finalTotal || b.totalAmount || 0) - (a.finalTotal || a.totalAmount || 0))
+      .slice(0, 5);
+
+    return { grandTotal, roomTotalSum, productTotalSum, branchRevenueMap, topBookings };
+  }, [filteredBookings]);
+
+  // Format Branch List with Percentage Share
+  const branchRevenueList = useMemo(() => {
+    return branchesList.map((br) => {
+      const data = branchRevenueMap[br._id] || { amount: 0, count: 0, name: br.name };
+      const percentage = grandTotal > 0 ? ((data.amount / grandTotal) * 100).toFixed(1) : 0;
+      return {
+        id: br._id,
+        name: br.name,
+        address: br.address,
+        amount: data.amount,
+        count: data.count,
+        percentage: parseFloat(percentage),
+      };
+    }).sort((a, b) => b.amount - a.amount);
+  }, [branchesList, branchRevenueMap, grandTotal]);
 
   return (
     <div className="dash">
@@ -213,44 +259,8 @@ export default function OwnerDashboard() {
         menuItems={ownerMenuItems}
         active={active}
         setActive={(key) => {
-          if (key === "facility") {
-            navigate("/branches");
-            return;
-          }
-          if (key === "slot") {
-            navigate("/slots");
-            return;
-          }
-          if (key === "room") {
-            navigate("/room");
-            return;
-          }
-          if (key === "roomtype") {
-            navigate("/roomtype");
-            return;
-          }
           if (key === "adduser") {
             setShowAddUser(true);
-            return;
-          }
-          if (key === "news") {
-            navigate("/news");
-            return;
-          }
-          if (key === "category") {
-            navigate("/categories");
-            return;
-          }
-          if (key === "product") {
-            navigate("/products");
-            return;
-          }
-          if (key === "review") {
-            navigate("/feedbacks");
-            return;
-          }
-          if (key === "bookinghistory") {
-            navigate("/bookinghistory");
             return;
           }
           setActive(key);
@@ -261,7 +271,7 @@ export default function OwnerDashboard() {
 
       {/* ── MAIN ── */}
       <div className="main">
-        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/owner-dashboard" }, { label: "Doanh thu" }]} />
+        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/owner-dashboard" }, { label: "Doanh thu trực quan" }]} />
 
         {/* Content */}
         <div className="content">
@@ -273,60 +283,262 @@ export default function OwnerDashboard() {
             )
           ) : (
             <>
-              <div>
-                <div className="pg-title">Doanh thu</div>
-                <div className="pg-sub">Tổng quan hoạt động tháng 6 · 2025</div>
-              </div>
-
-              {/* Metrics */}
-              <div className="metrics" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-                {metrics.map((m) => (
-                  <div className="metric" key={m.label}>
-                    <div className="metric-accent" style={{ background: m.color }} />
-                    <div className="metric-lbl">
-                      <i className={`ti ${m.icon}`} aria-hidden="true" />
-                      {m.label}
-                    </div>
-                    <div className="metric-val">
-                      {m.label === "Doanh thu"
-                        ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalRevenue)
-                        : m.label === "Đánh giá TB"
-                          ? averageRating
-                          : m.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Row 2 */}
-              <div className="row2">
-                <div className="card">
-                  <div className="card-head">
-                    <div className="card-title">
-                      <i className="ti ti-building" aria-hidden="true" />
-                      Doanh thu theo cơ sở
-                    </div>
-                  </div>
-                  {revenueByBranch.map((r) => (
-                    <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ fontWeight: 600, color: "var(--text-main)" }}>{r.name}</div>
-                      <div style={{ fontWeight: 700, color: "#16a34a" }}>
-                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(r.val)}
-                      </div>
-                    </div>
-                  ))}
-                  {revenueByBranch.length === 0 && (
-                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)" }}>
-                      Chưa có dữ liệu
-                    </div>
-                  )}
+              {/* ── HEADER & TIME FILTER BAR ── */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h1 className="pg-title" style={{ margin: 0 }}>Báo cáo Doanh thu Trực quan</h1>
+                  <p className="pg-sub" style={{ margin: "4px 0 0 0" }}>Phân tích kết quả kinh doanh toàn bộ chuỗi cơ sở Cinema Cafe</p>
                 </div>
 
+                {/* Time Range Filter Buttons */}
+                <div style={{ display: "flex", gap: "8px", background: "#ffffff", padding: "6px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <button
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: timeFilter === "today" ? "#0f766e" : "transparent",
+                      color: timeFilter === "today" ? "#ffffff" : "#64748b",
+                      transition: "all 0.2s"
+                    }}
+                    onClick={() => setTimeFilter("today")}
+                  >
+                    Hôm nay
+                  </button>
+                  <button
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: timeFilter === "month" ? "#0f766e" : "transparent",
+                      color: timeFilter === "month" ? "#ffffff" : "#64748b",
+                      transition: "all 0.2s"
+                    }}
+                    onClick={() => setTimeFilter("month")}
+                  >
+                    Tháng này
+                  </button>
+                  <button
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: timeFilter === "all" ? "#0f766e" : "transparent",
+                      color: timeFilter === "all" ? "#ffffff" : "#64748b",
+                      transition: "all 0.2s"
+                    }}
+                    onClick={() => setTimeFilter("all")}
+                  >
+                    Tất cả thời gian
+                  </button>
+                </div>
+              </div>
+
+              {/* ── METRICS OVERVIEW (4 KEY CARDS) ── */}
+              <div className="metrics" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "24px" }}>
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#0f766e" }} />
+                  <div className="metric-lbl"><i className="ti ti-coin" /> Tổng Doanh thu</div>
+                  <div className="metric-val" style={{ color: "#0f766e" }}>{formatVND(grandTotal)}</div>
+                </div>
+
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#2563eb" }} />
+                  <div className="metric-lbl"><i className="ti ti-door" /> Tiền thuê phòng</div>
+                  <div className="metric-val" style={{ color: "#2563eb" }}>{formatVND(roomTotalSum)}</div>
+                </div>
+
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#ec4899" }} />
+                  <div className="metric-lbl"><i className="ti ti-package" /> Đồ ăn & Dịch vụ</div>
+                  <div className="metric-val" style={{ color: "#be185d" }}>{formatVND(productTotalSum)}</div>
+                </div>
+
+                <div className="metric">
+                  <div className="metric-accent" style={{ background: "#8b5cf6" }} />
+                  <div className="metric-lbl"><i className="ti ti-users" /> Tổng số khách hàng</div>
+                  <div className="metric-val" style={{ color: "#6d28d9" }}>{totalCustomers} người</div>
+                </div>
+              </div>
+
+              {/* ── VISUAL BRANCH REVENUE BREAKDOWN & PROGRESS BARS ── */}
+              <div className="row2" style={{ marginBottom: "24px" }}>
+                {/* Left: Branch Revenue Visual Progress Bars */}
+                <div className="card" style={{ flex: 1.3 }}>
+                  <div className="card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="card-title">
+                      <i className="ti ti-building" style={{ color: "#0f766e" }} />
+                      Tỷ trọng Doanh thu theo Cơ sở
+                    </div>
+                    <span style={{ fontSize: "0.83rem", color: "#64748b", fontWeight: 600 }}>
+                      {filteredBookings.length} đơn hoàn thành
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "18px" }}>
+                    {branchRevenueList.map((b) => (
+                      <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <strong style={{ fontSize: "0.98rem", color: "#0f172a" }}>{b.name}</strong>
+                            <span style={{ fontSize: "0.8rem", color: "#64748b", marginLeft: "8px" }}>({b.count} đơn)</span>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <strong style={{ fontSize: "1rem", color: "#0f766e" }}>{formatVND(b.amount)}</strong>
+                            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#64748b", marginLeft: "8px" }}>
+                              {b.percentage}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Visual Progress Bar */}
+                        <div style={{ width: "100%", height: "10px", background: "#f1f5f9", borderRadius: "10px", overflow: "hidden" }}>
+                          <div
+                            style={{
+                              width: `${b.percentage}%`,
+                              height: "100%",
+                              background: "linear-gradient(90deg, #0f766e 0%, #14b8a6 100%)",
+                              borderRadius: "10px",
+                              transition: "width 0.5s ease"
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                    {branchRevenueList.length === 0 && (
+                      <div style={{ textAlign: "center", padding: "30px 0", color: "#64748b" }}>
+                        Chưa có dữ liệu doanh thu trong khoảng thời gian này.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: Revenue Share Donut / Split Card */}
+                <div className="card" style={{ flex: 0.7 }}>
+                  <div className="card-head">
+                    <div className="card-title">
+                      <i className="ti ti-chart-pie" style={{ color: "#ec4899" }} />
+                      Tỷ trọng Nguồn Doanh thu
+                    </div>
+                  </div>
+
+                  <div style={{ padding: "16px 0", display: "flex", flexDirection: "column", gap: "20px" }}>
+                    {/* Room Revenue Bar */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#334155" }}>🚪 Tiền thuê phòng</span>
+                        <strong style={{ color: "#2563eb" }}>
+                          {grandTotal > 0 ? ((roomTotalSum / grandTotal) * 100).toFixed(1) : 0}%
+                        </strong>
+                      </div>
+                      <div style={{ height: "10px", background: "#f1f5f9", borderRadius: "10px", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${grandTotal > 0 ? (roomTotalSum / grandTotal) * 100 : 0}%`,
+                            height: "100%",
+                            background: "#2563eb",
+                            borderRadius: "10px"
+                          }}
+                        />
+                      </div>
+                      <div style={{ fontSize: "0.83rem", color: "#64748b", marginTop: "4px" }}>
+                        Giá trị: {formatVND(roomTotalSum)}
+                      </div>
+                    </div>
+
+                    {/* Product Revenue Bar */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#334155" }}>🍿 Thực đơn & Dịch vụ</span>
+                        <strong style={{ color: "#be185d" }}>
+                          {grandTotal > 0 ? ((productTotalSum / grandTotal) * 100).toFixed(1) : 0}%
+                        </strong>
+                      </div>
+                      <div style={{ height: "10px", background: "#f1f5f9", borderRadius: "10px", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${grandTotal > 0 ? (productTotalSum / grandTotal) * 100 : 0}%`,
+                            height: "100%",
+                            background: "#be185d",
+                            borderRadius: "10px"
+                          }}
+                        />
+                      </div>
+                      <div style={{ fontSize: "0.83rem", color: "#64748b", marginTop: "4px" }}>
+                        Giá trị: {formatVND(productTotalSum)}
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                      <div style={{ fontSize: "0.83rem", color: "#475569", fontWeight: 600 }}>⭐ Trung bình mỗi đơn (AOV):</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f766e", marginTop: "2px" }}>
+                        {formatVND(filteredBookings.length > 0 ? grandTotal / filteredBookings.length : 0)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── ROW 3: TOP BOOKINGS & RECENT REVIEWS ── */}
+              <div className="row2">
+                {/* Top Revenue Bookings */}
+                <div className="card">
+                  <div className="card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="card-title">
+                      <i className="ti ti-trophy" style={{ color: "#f59e0b" }} />
+                      Đơn hàng doanh thu cao nhất
+                    </div>
+                    <button
+                      onClick={() => navigate("/bookinghistory")}
+                      style={{ background: "none", border: "none", color: "#0f766e", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Xem tất cả →
+                    </button>
+                  </div>
+                  <table className="dash-table">
+                    <thead>
+                      <tr>
+                        <th>Khách hàng</th>
+                        <th>Phòng</th>
+                        <th>Khung giờ</th>
+                        <th>Tổng tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topBookings.map((b) => (
+                        <tr key={b._id}>
+                          <td style={{ fontWeight: 700, color: "#0f172a" }}>
+                            {b.customerId?.fullName || b.customerName || "Khách tại quầy"}
+                          </td>
+                          <td className="td-muted">{b.roomId?.roomName || "Phòng VIP"}</td>
+                          <td className="td-muted">{b.startTime || "—"} - {b.endTime || "—"}</td>
+                          <td style={{ fontWeight: 800, color: "#0f766e" }}>{formatVND(b.finalTotal || b.totalAmount)}</td>
+                        </tr>
+                      ))}
+                      {topBookings.length === 0 && (
+                        <tr>
+                          <td colSpan={4} style={{ textAlign: "center", padding: "20px 0", color: "#64748b" }}>
+                            Chưa có đơn hàng nào
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Recent Reviews */}
                 <div className="card">
                   <div className="card-head">
                     <div className="card-title">
-                      <i className="ti ti-star" aria-hidden="true" />
-                      Đánh giá gần đây
+                      <i className="ti ti-star" style={{ color: "#8b5cf6" }} />
+                      Đánh giá gần đây từ khách hàng ({averageRating}★)
                     </div>
                   </div>
                   {feedbacksList.slice(0, 5).map((r) => {
@@ -350,14 +562,12 @@ export default function OwnerDashboard() {
                     );
                   })}
                   {feedbacksList.length === 0 && (
-                    <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)" }}>
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "#64748b" }}>
                       Chưa có đánh giá nào
                     </div>
                   )}
                 </div>
               </div>
-
-
             </>
           )}
         </div>
@@ -372,6 +582,3 @@ export default function OwnerDashboard() {
     </div>
   );
 }
-
-
-

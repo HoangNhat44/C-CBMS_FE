@@ -123,21 +123,6 @@ export default function RoomPage() {
     navigate("/login", { replace: true });
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "room") return;
-    if (key === "roomtype") { navigate("/roomtype"); return; }
-    else if (key === "news") { navigate("/news"); return; }
-    else if (key === "category") { navigate("/categories"); return; }
-    else if (key === "product") { navigate("/products"); return; }
-    else if (key === "review") { navigate("/feedbacks"); return; }
-    else if (key === "bookinghistory") { navigate("/bookinghistory"); return; }
-    else if (key === "facility") { navigate("/branches"); return; }
-    else if (key === "slot") { navigate("/slots"); return; }
-    else {
-      navigate("/owner-dashboard", { state: { activeTab: key } });
-    }
-  };
-
   const handleSaveRoom = async (formData) => {
     // formData is a FormData instance from RoomForm
     const branchId = formData.get("branchId") || selectedBranchId;
@@ -219,7 +204,6 @@ export default function RoomPage() {
       <Sidebar
         menuItems={ownerMenuItems}
         active="room"
-        setActive={handleMenuChange}
         handleLogout={handleLogout}
         onLogoClick={() => navigate("/owner-dashboard")}
       />

@@ -148,21 +148,7 @@ export default function MyProfilePage() {
     setError("");
   };
 
-  const handleMenuChange = (key) => {
-    if (key === "room") navigate("/room");
-    else if (key === "roomtype") navigate("/roomtype");
-    else if (key === "news") navigate("/news");
-    else if (key === "category") navigate("/categories");
-    else if (key === "product") navigate("/products");
-    else if (key === "review") navigate("/feedbacks");
-    else if (key === "bookinghistory") navigate("/bookinghistory");
-    else if (key === "facility") navigate("/branches");
-    else if (key === "slot") navigate("/slots");
-    else if (key === "promotion" || key === "revenue" || key === "service" || key === "adduser") {
-      navigate("/owner-dashboard", { state: { activeTab: key } });
-    }
-    else navigate("/owner-dashboard");
-  };
+
 
   if (loading && !user) {
     return <div style={{ padding: "40px", textAlign: "center" }}>Đang tải thông tin cá nhân...</div>;
@@ -286,7 +272,6 @@ export default function MyProfilePage() {
         <Sidebar
           menuItems={menuItems}
           active=""
-          setActive={handleMenuChange}
           handleLogout={handleLogout}
           onLogoClick={() => navigate(roleName === "staff" ? "/staff-dashboard" : "/owner-dashboard")}
         />
