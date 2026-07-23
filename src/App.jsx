@@ -68,7 +68,7 @@ function App() {
           </Route>
 
           {/* Admin routes */}
-          <Route element={<ProtectedRoute requiredPermissions={["VIEW_ROLE", "VIEW_ACCOUNT"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} requiredPermissions={["VIEW_ROLE", "VIEW_ACCOUNT"]} />}>
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/users" element={<UserList />} />
             <Route path="/role-permission" element={<RolePermission />} />
