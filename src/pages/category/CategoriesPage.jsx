@@ -59,7 +59,7 @@ function CategoriesPage() {
       setError(
         err.response?.data?.error
           ? `${err.response.data.message}: ${err.response.data.error}`
-          : err.response?.data?.message || "Không thể tải danh sách thể loại"
+          : "Không thể tải danh sách thể loại"
       );
     } finally {
       setLoading(false);
@@ -154,7 +154,7 @@ function CategoriesPage() {
       setError(
         err.response?.data?.error
           ? `${err.response.data.message}: ${err.response.data.error}`
-          : err.response?.data?.message || "Lỗi khi lưu thông tin thể loại"
+          : "Lỗi khi lưu thông tin thể loại"
       );
     } finally {
       setSubmitting(false);

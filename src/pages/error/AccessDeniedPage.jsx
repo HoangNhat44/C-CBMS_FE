@@ -53,8 +53,7 @@ export default function AccessDeniedPage() {
 
         {/* Description */}
         <p className="ad-desc">
-          Tài khoản <strong>{roleName}</strong> của bạn không có quyền truy cập
-          trang này. Vui lòng liên hệ quản trị viên nếu bạn cho rằng đây là lỗi.
+          Bạn không có quyền để thực hiện hành động này
         </p>
 
         {/* Info box */}

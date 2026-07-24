@@ -105,7 +105,7 @@ function ProductsPage() {
       setError(
         err.response?.data?.error
           ? `${err.response.data.message}: ${err.response.data.error}`
-          : err.response?.data?.message || "Không thể tải danh sách dữ liệu"
+          : "Không thể tải danh sách dữ liệu"
       );
     } finally {
       setLoading(false);
@@ -243,7 +243,7 @@ function ProductsPage() {
       setError(
         err.response?.data?.error
           ? `${err.response.data.message}: ${err.response.data.error}`
-          : err.response?.data?.message || "Lỗi khi lưu thông tin sản phẩm"
+          : "Lỗi khi lưu thông tin sản phẩm"
       );
     } finally {
       setSubmitting(false);

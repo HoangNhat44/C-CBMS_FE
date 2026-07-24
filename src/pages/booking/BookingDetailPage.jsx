@@ -64,7 +64,7 @@ function BookingDetailPage() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackComment, setFeedbackComment] = useState("");
-
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
 
 
 
@@ -145,7 +145,7 @@ function BookingDetailPage() {
         }
       } catch (err) {
         console.error("Failed to load booking details", err);
-        setError("Lỗi khi tải thông tin chi tiết đặt phòng.");
+        setError(err.response?.data?.message || "Lỗi khi tải thông tin chi tiết đặt phòng.");
       } finally {
         setLoading(false);
       }
@@ -332,22 +332,37 @@ function BookingDetailPage() {
 
     try {
       setSubmitting(true);
-      const res = await feedbackService.createFeedback({
-        bookingId,
-        rating: feedbackRating,
-        comment: feedbackComment
-      });
-      if (res.data?.success) {
-        alert("Gửi đánh giá thành công! Cảm ơn bạn.");
-        setFeedback(res.data.data);
-        setShowFeedbackModal(false);
-        setFeedbackComment("");
+      if (isEditingFeedback && feedback?._id) {
+        const res = await feedbackService.updateFeedback(feedback._id, {
+          rating: feedbackRating,
+          comment: feedbackComment
+        });
+        if (res.data?.success) {
+          alert("Cập nhật đánh giá thành công! Cảm ơn bạn.");
+          setFeedback(res.data.data);
+          setShowFeedbackModal(false);
+          setIsEditingFeedback(false);
+        } else {
+          alert(res.data?.message || "Lỗi khi cập nhật đánh giá.");
+        }
       } else {
-        alert(res.data?.message || "Lỗi khi gửi đánh giá.");
+        const res = await feedbackService.createFeedback({
+          bookingId,
+          rating: feedbackRating,
+          comment: feedbackComment
+        });
+        if (res.data?.success) {
+          alert("Gửi đánh giá thành công! Cảm ơn bạn.");
+          setFeedback(res.data.data);
+          setShowFeedbackModal(false);
+          setFeedbackComment("");
+        } else {
+          alert(res.data?.message || "Lỗi khi gửi đánh giá.");
+        }
       }
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Không thể gửi đánh giá.");
+      alert(err.response?.data?.message || "Không thể xử lý đánh giá.");
     } finally {
       setSubmitting(false);
     }
@@ -897,8 +912,36 @@ function BookingDetailPage() {
         {feedback && (
           <div className="refund-info-card" style={{ marginTop: "20px" }}>
             <div className="info-block">
-              <h3>⭐ Đánh giá phản hồi của bạn</h3>
-              <div className="info-box-rows">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>⭐ Đánh giá phản hồi của bạn</h3>
+                {roleName === 'customer' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeedbackRating(feedback.rating);
+                      setFeedbackComment(feedback.comment || "");
+                      setIsEditingFeedback(true);
+                      setShowFeedbackModal(true);
+                    }}
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor: "#f8fafc",
+                      color: "#0f766e",
+                      border: "1px solid #0d9488",
+                      borderRadius: "6px",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    ✏️ Chỉnh sửa đánh giá
+                  </button>
+                )}
+              </div>
+              <div className="info-box-rows" style={{ marginTop: 0 }}>
                 <div className="info-box-row">
                   <span>Đánh giá:</span>
                   <strong style={{ color: "#f59e0b", fontSize: "1.1rem" }}>
@@ -1058,7 +1101,7 @@ function BookingDetailPage() {
         <div className="refund-modal-backdrop">
           <div className="refund-modal-content">
             <div className="refund-modal-header">
-              <h2>Đánh giá & Phản hồi dịch vụ</h2>
+              <h2>{isEditingFeedback ? "Chỉnh sửa Đánh giá" : "Đánh giá & Phản hồi dịch vụ"}</h2>
             </div>
             <form onSubmit={handleFeedbackSubmit}>
               <div className="refund-modal-body">
@@ -1100,7 +1143,7 @@ function BookingDetailPage() {
                   style={{ backgroundColor: "#0f766e" }}
                   disabled={submitting}
                 >
-                  {submitting ? "Đang gửi..." : "Gửi đánh giá"}
+                  {submitting ? "Đang gửi..." : isEditingFeedback ? "Cập nhật đánh giá" : "Gửi đánh giá"}
                 </button>
               </div>
             </form>

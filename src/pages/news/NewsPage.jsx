@@ -120,6 +120,12 @@ export default function NewsPage() {
       await fetchNews();
     } catch (error) {
       console.error("Save news failed", error);
+      
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        alert(error.response.data?.message || "Bạn không có quyền để thực hiện hành động này");
+        return;
+      }
+
       setApiOffline(true);
 
       const localNews = {
@@ -148,6 +154,12 @@ export default function NewsPage() {
       await fetchNews();
     } catch (error) {
       console.error("Delete news failed", error);
+
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        alert(error.response.data?.message || "Bạn không có quyền để thực hiện hành động này");
+        return;
+      }
+
       setApiOffline(true);
       setNews((prev) => prev.filter((newsItem) => newsItem._id !== item._id));
     }

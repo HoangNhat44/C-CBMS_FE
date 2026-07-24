@@ -207,7 +207,7 @@ function BookingPage() {
           }
         }
       } catch (err) {
-        setError("Không thể tải thông tin chi nhánh.");
+        setError(err.response?.data?.message || "Không thể tải thông tin chi nhánh.");
       }
     };
     loadInitialData();
@@ -258,7 +258,7 @@ function BookingPage() {
         setPromoError("");
         setPromoSuccess("");
       } catch (err) {
-        setError("Không thể tải dữ liệu sơ đồ phòng và bảng giá.");
+        setError(err.response?.data?.message || "Không thể tải dữ liệu sơ đồ phòng và bảng giá.");
       } finally {
         setLoading(false);
       }

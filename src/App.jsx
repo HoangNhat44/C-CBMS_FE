@@ -26,14 +26,77 @@ import SlotsPage from "./pages/slot/SlotsPage";
 import RoomPricePage from "./pages/roomPrice/RoomPricePage";
 import MyProfilePage from "./pages/profile/MyProfilePage";
 import PublicNewsPage from "./pages/news/PublicNewsPage";
+import PublicFeedbacksPage from "./pages/feedback/PublicFeedbacksPage";
 
+import React, { useState, useEffect } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RolePermission from "./pages/account/RolePermission";
 import AccessDeniedPage from "./pages/error/AccessDeniedPage";
+function GlobalAlert() {
+  const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    const originalAlert = window.alert;
+    window.alert = (message) => {
+      const msgLower = typeof message === 'string' ? message.toLowerCase() : String(message).toLowerCase();
+      const isError = msgLower.includes("không có quyền") || msgLower.includes("lỗi") || msgLower.includes("thất bại") || msgLower.includes("từ chối");
+      const isSuccess = msgLower.includes("thành công");
+      const isWarning = msgLower.includes("không thể") || msgLower.includes("vui lòng") || msgLower.includes("không tải được") || msgLower.includes("quá lớn");
+      const type = isError ? "error" : isSuccess ? "success" : isWarning ? "warning" : "info";
+
+      const id = Date.now() + Math.random();
+      setAlerts((prev) => [...prev, { id, message, type }]);
+      setTimeout(() => {
+        setAlerts((prev) => prev.filter((a) => a.id !== id));
+      }, 4000);
+    };
+
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
+  if (alerts.length === 0) return null;
+
+  return (
+    <div className="global-toast-container">
+      {alerts.map((alert) => (
+        <div key={alert.id} className={`global-toast-message ${alert.type}`}>
+          {alert.type === "error" ? (
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               <circle cx="12" cy="12" r="10"></circle>
+               <line x1="12" y1="8" x2="12" y2="12"></line>
+               <line x1="12" y1="16" x2="12.01" y2="16"></line>
+             </svg>
+          ) : alert.type === "warning" ? (
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+               <line x1="12" y1="9" x2="12" y2="13"></line>
+               <line x1="12" y1="17" x2="12.01" y2="17"></line>
+             </svg>
+          ) : alert.type === "success" ? (
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+               <polyline points="22 4 12 14.01 9 11.01"></polyline>
+             </svg>
+          ) : (
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               <circle cx="12" cy="12" r="10"></circle>
+               <line x1="12" y1="16" x2="12" y2="12"></line>
+               <line x1="12" y1="8" x2="12.01" y2="8"></line>
+             </svg>
+          )}
+          <span>{alert.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
+      <GlobalAlert />
       <BrowserRouter>
         <Routes>
           {/* Public / Semi-public routes */}
@@ -48,6 +111,7 @@ function App() {
           <Route path="/landing-dashboard" element={<LandingPage />} />
           <Route path="/apply-promotion" element={<ApplyPromotion />} />
           <Route path="/public-news" element={<PublicNewsPage />} />
+          <Route path="/public-feedbacks" element={<PublicFeedbacksPage />} />
           <Route path="/access-denied" element={<AccessDeniedPage />} />
 
           {/* Protected routes - all authenticated users */}

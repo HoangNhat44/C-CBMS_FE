@@ -87,7 +87,7 @@ function BookingHistoryPage() {
         }
       } catch (err) {
         console.error("Failed to load bookings", err);
-        setError("Không thể tải danh sách lịch sử đặt phòng.");
+        setError(err.response?.data?.message || "Không thể tải danh sách lịch sử đặt phòng.");
       } finally {
         setLoading(false);
       }

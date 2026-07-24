@@ -60,7 +60,7 @@ export default function BranchesPage() {
       }
     } catch (err) {
       console.error("Failed to fetch branches", err);
-      setError("Không thể tải danh sách chi nhánh.");
+      setError(err.response?.data?.message || "Không thể tải danh sách chi nhánh.");
     } finally {
       setLoading(false);
     }
@@ -207,7 +207,7 @@ export default function BranchesPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Lỗi khi thay đổi trạng thái chi nhánh.");
+      setError(err.response?.data?.message || "Lỗi khi thay đổi trạng thái chi nhánh.");
     }
   };
 
@@ -224,7 +224,7 @@ export default function BranchesPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Lỗi khi gửi yêu cầu vô hiệu hóa chi nhánh.");
+      setError(err.response?.data?.message || "Lỗi khi gửi yêu cầu vô hiệu hóa chi nhánh.");
     }
   };
 

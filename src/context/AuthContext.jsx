@@ -55,7 +55,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasPermission = (requiredCodes) => {
-    if (user?.role === 'owner' || user?.roleId?.name === 'owner' || user?.role?.name === 'owner') return true;
     if (!permissions.length) return false;
     const codesToCheck = Array.isArray(requiredCodes) ? requiredCodes : [requiredCodes];
     return permissions.some(code => codesToCheck.includes(code));

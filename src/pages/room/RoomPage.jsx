@@ -142,11 +142,28 @@ export default function RoomPage() {
       setSelectedBranchId(branchId);
     } catch (error) {
       console.error("Save room failed", error);
-      // Build local fallback from FormData
+      
+      // If it's a client/permission error (400, 401, 403), do not do offline fallback
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        alert(error.response.data?.message || "Bạn không có quyền để thực hiện hành động này");
+        return;
+      }
+
+      // Build local fallback from FormData for network errors only
       const localData = {};
       for (const [key, value] of formData.entries()) {
         if (key !== "image") localData[key] = value;
       }
+      
+      // Fix: localData.facilities might be a JSON string, parse it to array
+      if (typeof localData.facilities === "string") {
+        try {
+          localData.facilities = JSON.parse(localData.facilities);
+        } catch {
+          localData.facilities = [];
+        }
+      }
+
       const branch = branches.find((item) => item._id === localData.branchId);
       const roomType = roomTypes.find((item) => item._id === localData.roomTypeId);
       const localRoom = {
@@ -194,6 +211,12 @@ export default function RoomPage() {
       await fetchRooms();
     } catch (error) {
       console.error("Update room status failed", error);
+      
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        alert(error.response.data?.message || "Bạn không có quyền để thực hiện hành động này");
+        return;
+      }
+
       setApiOffline(true);
       setRooms((prev) => prev.map((item) => (item._id === room._id ? { ...item, status } : item)));
     }
