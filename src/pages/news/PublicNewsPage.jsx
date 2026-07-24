@@ -23,7 +23,7 @@ export default function PublicNewsPage() {
       setNews(activeNews);
     } catch (err) {
       console.error("Failed to fetch public news", err);
-      setError("Không thể tải bảng tin lúc này. Vui lòng thử lại sau.");
+      setError(err.response?.data?.message || "Không thể tải bảng tin lúc này. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
     }

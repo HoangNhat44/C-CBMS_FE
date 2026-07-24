@@ -65,7 +65,7 @@ export default function MyProfilePage() {
       }
     } catch (err) {
       console.error("Failed to fetch profile", err);
-      setError("Có lỗi xảy ra khi tải thông tin cá nhân.");
+      setError(err.response?.data?.message || "Có lỗi xảy ra khi tải thông tin cá nhân.");
     } finally {
       setLoading(false);
     }

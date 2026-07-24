@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import roomTypeAPI from "../../services/roomType.service";
 import "./Dashboard.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { useAuth } from "../../context/AuthContext";
 
 const features = [
   { icon: "ti-shield-check", title: "Xác nhận nhanh chóng", desc: "Nhận xác nhận đặt phòng ngay lập tức" },
@@ -20,6 +22,7 @@ const highlights = [
 export default function LandingPage() {
   const [rooms, setRooms] = useState([]);
   const [showAll, setShowAll] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -47,6 +50,13 @@ export default function LandingPage() {
     if (!price || price === 0) return "Đang cập nhật";
     return new Intl.NumberFormat("vi-VN").format(price) + "₫/giờ";
   };
+
+  if (user) {
+    const role = user?.roleId?.name?.toLowerCase() || user?.role?.name?.toLowerCase() || user?.role?.toLowerCase();
+    if (role && role !== "customer") {
+      return <Navigate to="/access-denied" replace />;
+    }
+  }
 
   return (
     <div className="lp">

@@ -59,7 +59,7 @@ export default function SlotsPage() {
       }
     } catch (err) {
       console.error("Failed to fetch slots", err);
-      setError("Không thể tải danh sách khung giờ (slots).");
+      setError(err.response?.data?.message || "Không thể tải danh sách khung giờ (slots).");
     } finally {
       setLoading(false);
     }
@@ -214,7 +214,7 @@ export default function SlotsPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Lỗi khi thay đổi trạng thái slot.");
+      setError(err.response?.data?.message || "Lỗi khi thay đổi trạng thái slot.");
     }
   };
 

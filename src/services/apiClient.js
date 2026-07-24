@@ -43,6 +43,10 @@ apiClient.interceptors.response.use(
       // Handle unauthorized access
       localStorage.removeItem('token');
       window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      // Standardize permission error messages across the entire app
+      // Completely replace response data to ensure we overwrite any primitive strings sent by backend
+      error.response.data = { message: "Bạn không có quyền để thực hiện hành động này" };
     }
     return Promise.reject(error);
   }

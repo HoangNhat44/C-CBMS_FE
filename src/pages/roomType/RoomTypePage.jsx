@@ -172,6 +172,12 @@ export default function RoomTypePage() {
       await fetchRoomTypes();
     } catch (error) {
       console.error("Save room type failed", error);
+      
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        alert(error.response.data?.message || "Bạn không có quyền để thực hiện hành động này");
+        return;
+      }
+
       setApiOffline(true);
 
       const localRoomType = {
@@ -201,6 +207,12 @@ export default function RoomTypePage() {
       );
     } catch (error) {
       console.error("Toggle room type status failed", error);
+
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        alert(error.response.data?.message || "Bạn không có quyền để thực hiện hành động này");
+        return;
+      }
+
       setApiOffline(true);
       setRoomTypes((prev) =>
         prev.map((roomType) => (roomType._id === item._id ? { ...roomType, isActive: !roomType.isActive } : roomType))

@@ -80,6 +80,7 @@ export default function Header() {
             <Link to="/bookinghistory" className={`nav-link ${currentPath === "/bookinghistory" ? "active" : ""}`}>Lịch sử đặt phòng</Link>
           )}
           <Link to="/public-news" className={`nav-link ${currentPath === "/public-news" ? "active" : ""}`}>Bảng tin</Link>
+          <Link to="/public-feedbacks" className={`nav-link ${currentPath === "/public-feedbacks" ? "active" : ""}`}>Đánh giá khách hàng</Link>
           {user && ["owner", "staff", "admin"].includes(user.role?.toLowerCase()) && (
             <Link to="/feedbacks" className={`nav-link ${currentPath === "/feedbacks" ? "active" : ""}`}>Đánh giá</Link>
           )}

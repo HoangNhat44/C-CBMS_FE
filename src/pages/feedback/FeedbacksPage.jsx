@@ -150,9 +150,7 @@ function FeedbacksPage() {
       const res = await feedbackService.getAllFeedbacks(params);
       setFeedbacks(res.data?.data || []);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Không thể tải danh sách phản hồi"
-      );
+      setError(err.response?.data?.message || "Không thể tải danh sách phản hồi");
     } finally {
       setLoading(false);
     }
@@ -270,9 +268,7 @@ function FeedbacksPage() {
         }
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Không thể gửi phản hồi. Vui lòng thử lại."
-      );
+      setError(err.response?.data?.message || "Không thể gửi phản hồi. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }

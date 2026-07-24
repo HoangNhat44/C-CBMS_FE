@@ -15,7 +15,7 @@ import AddUserModal from "../account/AddUserModal";
 export const ownerMenuItems = [
   {
     section: "Tổng quan",
-    items: [{ icon: "ti-chart-bar", label: "Doanh thu", badge: "Mới", key: "revenue" }],
+    items: [{ icon: "ti-chart-bar", label: "Doanh thu", badge: "Mới", key: "revenue", requiredPermission: "VIEW_REVENUE" }],
   },
   {
     section: "Đặt phòng",
@@ -281,8 +281,9 @@ export default function OwnerDashboard() {
             ) : (
               <Navigate to="/access-denied" replace />
             )
-          ) : (
-            <>
+          ) : active === "revenue" ? (
+            hasPermission("VIEW_REVENUE") ? (
+              <>
               {/* ── HEADER & TIME FILTER BAR ── */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
                 <div>
@@ -569,6 +570,17 @@ export default function OwnerDashboard() {
                 </div>
               </div>
             </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "#64748b", background: "#ffffff", borderRadius: "12px", border: "1px dashed #cbd5e1", marginTop: "20px" }}>
+                 <i className="ti ti-lock" style={{ fontSize: "48px", color: "#cbd5e1" }}></i>
+                 <h2 style={{ marginTop: "16px", color: "#334155", fontSize: "1.2rem" }}>Không có quyền truy cập</h2>
+                 <p style={{ marginTop: "8px", fontSize: "0.95rem" }}>Bạn không có quyền để thực hiện hành động này</p>
+              </div>
+            )
+          ) : (
+            <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+              Tính năng đang được phát triển
+            </div>
           )}
         </div>
       </div>
