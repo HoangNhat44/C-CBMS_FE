@@ -4,9 +4,11 @@ import Footer from "../../components/Footer";
 import feedbackService from "../../services/feedback.service";
 import branchService from "../../services/branch.service";
 import roomAPI from "../../services/room.service";
+import { useAuth } from "../../context/AuthContext";
 import "./FeedbacksPage.css";
 
 function PublicFeedbacksPage() {
+  const { user } = useAuth();
   const [feedbacks, setFeedbacks] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,6 +19,12 @@ function PublicFeedbacksPage() {
   const [roomFilter, setRoomFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+
+  // Edit states
+  const [editingFeedback, setEditingFeedback] = useState(null);
+  const [editRating, setEditRating] = useState(5);
+  const [editComment, setEditComment] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const fetchBranches = useCallback(async () => {
     try {
@@ -94,6 +102,30 @@ function PublicFeedbacksPage() {
     }
     return stars;
   };
+
+  const handleStartEdit = (item) => {
+    setEditingFeedback(item);
+    setEditRating(item.rating);
+    setEditComment(item.comment || "");
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      setSaving(true);
+      await feedbackService.updateFeedback(editingFeedback._id, {
+        rating: editRating,
+        comment: editComment
+      });
+      setEditingFeedback(null);
+      fetchFeedbacks();
+    } catch (err) {
+      alert(err.response?.data?.message || "Không thể cập nhật đánh giá");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const currentUserId = user?._id || user?.id;
 
   return (
     <div className="lp" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -233,6 +265,12 @@ function PublicFeedbacksPage() {
                   minute: "2-digit"
                 });
 
+                const isOwnFeedback = currentUserId && (
+                  (item.customerId?._id && String(item.customerId._id) === String(currentUserId)) ||
+                  (typeof item.customerId === "string" && String(item.customerId) === String(currentUserId)) ||
+                  (item.customerId?.id && String(item.customerId.id) === String(currentUserId))
+                );
+
                 return (
                   <div
                     key={item._id}
@@ -272,6 +310,30 @@ function PublicFeedbacksPage() {
                     <div className="feedback-comment-content">
                       "{item.comment || "Không có bình luận viết tay."}"
                     </div>
+
+                    {isOwnFeedback && (
+                      <div className="feedback-card-actions" style={{ borderTop: "1px solid #f1f5f9", paddingTop: "14px", marginTop: "auto", display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          className="btn-action"
+                          style={{
+                            background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)",
+                            color: "#ffffff",
+                            padding: "6px 12px",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            border: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px"
+                          }}
+                          onClick={() => handleStartEdit(item)}
+                        >
+                          <i className="ti ti-edit" /> Sửa đánh giá
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -280,6 +342,69 @@ function PublicFeedbacksPage() {
         </div>
       </div>
       <Footer />
+
+      {/* Edit Feedback Modal */}
+      {editingFeedback && (
+        <div className="modal-overlay">
+          <div className="modal-content feedback-modal">
+            <div className="modal-header">
+              <h3>Chỉnh sửa đánh giá của bạn</h3>
+              <button className="btn-close-modal" onClick={() => setEditingFeedback(null)}>
+                <i className="ti ti-x" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label required">Điểm đánh giá</label>
+                <div className="star-picker">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      className="star-picker-wrapper"
+                      onClick={() => setEditRating(star)}
+                    >
+                      <i
+                        className={`ti ${
+                          star <= editRating ? "ti-star-filled" : "ti-star"
+                        } star-picker-icon ${star <= editRating ? "active" : ""}`}
+                        style={{ fontSize: "1.85rem", cursor: "pointer", color: star <= editRating ? "#f59e0b" : "#cbd5e1", marginRight: "4px" }}
+                      />
+                    </span>
+                  ))}
+                  <span className="star-picker-text">{editRating} / 5 sao</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Bình luận của bạn</label>
+                <textarea
+                  className="form-input-control textarea-control"
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", minHeight: "100px" }}
+                  placeholder="Chia sẻ thêm cảm nhận của bạn về phòng chiếu phim và dịch vụ..."
+                  value={editComment}
+                  onChange={(e) => setEditComment(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-cancel"
+                onClick={() => setEditingFeedback(null)}
+                disabled={saving}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn-submit"
+                onClick={handleSaveEdit}
+                disabled={saving}
+              >
+                {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
