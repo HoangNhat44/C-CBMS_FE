@@ -729,17 +729,27 @@
 }
 
 .error-message {
-  color: var(--danger);
-  font-size: 0.85rem;
+  color: #000000;
+  background-color: #fdecea;
+  font-size: 0.95rem;
   font-weight: 600;
-  margin: 0;
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #f5c2c7;
+  text-align: center;
 }
 
 .success-message {
-  color: var(--success);
-  font-size: 0.85rem;
+  color: #000000;
+  background-color: #edf7ed;
+  font-size: 0.95rem;
   font-weight: 600;
-  margin: 0;
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #c3e6cb;
+  text-align: center;
 }
 
 .checkout-submit-btn {

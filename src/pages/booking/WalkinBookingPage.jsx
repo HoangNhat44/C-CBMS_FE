@@ -418,7 +418,8 @@ export default function WalkinBookingPage() {
           fullName: guestForm.fullName,
           email: guestForm.email,
           phone: guestForm.phone,
-        }
+        },
+        source: "walk-in",
       };
 
       const res = await bookingAPI.createBooking(payload);

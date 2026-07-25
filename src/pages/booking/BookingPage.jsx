@@ -487,6 +487,7 @@ function BookingPage() {
         note: guestForm.note || `Đặt phòng cho ${currentUser ? currentUser.fullName : (guestForm.fullName || "Khách")}`,
         products: productsPayload,
         appliedPromotions: selectedPromotions,
+        source: "online",
       };
 
       if (currentUser) {
