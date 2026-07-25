@@ -323,6 +323,27 @@ function BookingDetailPage() {
     }
   };
 
+  const handleDeleteFeedback = async () => {
+    if (!feedback?._id) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này không?")) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await feedbackService.deleteFeedback(feedback._id);
+      if (res.data?.success || res.success) {
+        alert("Xóa đánh giá thành công!");
+        setFeedback(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Xóa đánh giá thất bại: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     if (!feedbackRating) {
@@ -808,14 +829,16 @@ function BookingDetailPage() {
                           >
                             {submitting ? "Đang xử lý..." : "✅ Xác nhận hoàn thành"}
                           </button>
-                          <button
-                            type="button"
-                            className="detail-action-btn detail-action-btn--cancel"
-                            onClick={handleCancelBooking}
-                            disabled={submitting}
-                          >
-                            {submitting ? "Đang xử lý..." : "🚫 Hủy đơn đặt phòng"}
-                          </button>
+                          {roleName !== "staff" && (
+                            <button
+                              type="button"
+                              className="detail-action-btn detail-action-btn--cancel"
+                              onClick={handleCancelBooking}
+                              disabled={submitting}
+                            >
+                              {submitting ? "Đang xử lý..." : "🚫 Hủy đơn đặt phòng"}
+                            </button>
+                          )}
                         </>
                       )}
                       {booking.status === "request_refund" && roleName === "owner" && (
@@ -915,30 +938,52 @@ function BookingDetailPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0 }}>⭐ Đánh giá phản hồi của bạn</h3>
                 {roleName === 'customer' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFeedbackRating(feedback.rating);
-                      setFeedbackComment(feedback.comment || "");
-                      setIsEditingFeedback(true);
-                      setShowFeedbackModal(true);
-                    }}
-                    style={{
-                      padding: "6px 12px",
-                      backgroundColor: "#f8fafc",
-                      color: "#0f766e",
-                      border: "1px solid #0d9488",
-                      borderRadius: "6px",
-                      fontWeight: "600",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    ✏️ Chỉnh sửa đánh giá
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={handleDeleteFeedback}
+                      disabled={submitting}
+                      style={{
+                        padding: "6px 12px",
+                        backgroundColor: "#fef2f2",
+                        color: "#dc2626",
+                        border: "1px solid #ef4444",
+                        borderRadius: "6px",
+                        fontWeight: "600",
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      🗑️ Xóa đánh giá
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFeedbackRating(feedback.rating);
+                        setFeedbackComment(feedback.comment || "");
+                        setIsEditingFeedback(true);
+                        setShowFeedbackModal(true);
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        backgroundColor: "#f8fafc",
+                        color: "#0f766e",
+                        border: "1px solid #0d9488",
+                        borderRadius: "6px",
+                        fontWeight: "600",
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      ✏️ Chỉnh sửa đánh giá
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="info-box-rows" style={{ marginTop: 0 }}>

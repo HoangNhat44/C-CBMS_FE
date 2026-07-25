@@ -125,6 +125,25 @@ function PublicFeedbacksPage() {
     }
   };
 
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này không?")) {
+      return;
+    }
+    try {
+      setSaving(true);
+      const res = await feedbackService.deleteFeedback(feedbackId);
+      if (res.data?.success || res.success) {
+        alert("Xóa đánh giá thành công!");
+        fetchFeedbacks();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Xóa đánh giá thất bại: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const currentUserId = user?._id || user?.id;
 
   return (
@@ -312,7 +331,26 @@ function PublicFeedbacksPage() {
                     </div>
 
                     {isOwnFeedback && (
-                      <div className="feedback-card-actions" style={{ borderTop: "1px solid #f1f5f9", paddingTop: "14px", marginTop: "auto", display: "flex", justifyContent: "flex-end" }}>
+                      <div className="feedback-card-actions" style={{ borderTop: "1px solid #f1f5f9", paddingTop: "14px", marginTop: "auto", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                        <button
+                          className="btn-action"
+                          style={{
+                            background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                            color: "#ffffff",
+                            padding: "6px 12px",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            border: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px"
+                          }}
+                          onClick={() => handleDeleteFeedback(item._id)}
+                        >
+                          <i className="ti ti-trash" /> Xóa
+                        </button>
                         <button
                           className="btn-action"
                           style={{

@@ -5,7 +5,7 @@ import branchAPI from "../../services/branch.service";
 import UserForm from "./UserForm";
 import { useAuth } from "../../context/AuthContext";
 
-export default function AddUserModal({ onClose, onSuccess }) {
+export default function AddUserModal({ onClose, onSuccess, defaultRole }) {
   const { user: currentUser } = useAuth();
   const [rolesList, setRolesList] = useState([]);
   const [branchesList, setBranchesList] = useState([]);
@@ -38,18 +38,30 @@ export default function AddUserModal({ onClose, onSuccess }) {
       if (res.data?.success) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert(res.data?.message || "Tạo người dùng thất bại.");
       }
     } catch (err) {
       console.error(err);
+      const errMsg = err.response?.data?.message || err.message || "Tạo người dùng thất bại.";
+      // translate "Email already exists" to Vietnamese for better UX if it matches
+      const displayMsg = errMsg === "Email already exists" 
+        ? "Email này đã tồn tại trong hệ thống!" 
+        : errMsg;
+      alert("Lỗi: " + displayMsg);
     }
   };
 
   const currentRoleName = currentUser?.role?.name?.toLowerCase() || currentUser?.roleId?.name?.toLowerCase() || "";
   let allowedRoles = rolesList.filter(r => r.name?.toLowerCase() !== "admin");
-  if (currentRoleName === "staff") {
+  
+  if (defaultRole) {
+    allowedRoles = allowedRoles.filter(r => r.name?.toLowerCase() === defaultRole.toLowerCase());
+  } else if (currentRoleName === "staff") {
     allowedRoles = allowedRoles.filter(r => r.name?.toLowerCase() === "customer");
   } else if (currentRoleName === "owner") {
-    allowedRoles = allowedRoles.filter(r => ["customer", "staff"].includes(r.name?.toLowerCase()));
+    // If Owner uses the generic "Add User" button from sidebar, only allow creating customer accounts (exactly like staff's side)
+    allowedRoles = allowedRoles.filter(r => r.name?.toLowerCase() === "customer");
   }
 
   return (

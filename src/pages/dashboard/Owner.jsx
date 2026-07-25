@@ -11,6 +11,7 @@ import promotionAPI from "../../services/promotion.service";
 import branchAPI from "../../services/branch.service";
 import { useAuth } from "../../context/AuthContext";
 import AddUserModal from "../account/AddUserModal";
+import StaffList from "../account/StaffList";
 
 export const ownerMenuItems = [
   {
@@ -20,7 +21,6 @@ export const ownerMenuItems = [
   {
     section: "Đặt phòng",
     items: [
-      { icon: "ti-calendar-plus", label: "Đặt phòng tại quầy", key: "walkin", badge: "Nhanh" },
       { icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory", requiredPermission: "VIEW_BOOKING_HISTORY" }
     ],
   },
@@ -54,7 +54,10 @@ export const ownerMenuItems = [
   },
   {
     section: "Hệ thống",
-    items: [{ icon: "ti-user-plus", label: "Thêm người dùng", key: "adduser" }],
+    items: [
+      { icon: "ti-user-plus", label: "Thêm người dùng", key: "adduser" },
+      { icon: "ti-users", label: "Quản lý nhân viên", key: "managestaff" }
+    ],
   },
 ];
 
@@ -181,6 +184,67 @@ export default function OwnerDashboard() {
     navigate("/login", { replace: true });
   };
 
+  const handleExportCSV = () => {
+    if (filteredBookings.length === 0) {
+      alert("Không có dữ liệu doanh thu để xuất!");
+      return;
+    }
+
+    const headers = [
+      "Mã đơn hàng",
+      "Khách hàng",
+      "Số điện thoại",
+      "Email",
+      "Chi nhánh",
+      "Phòng",
+      "Ngày đặt",
+      "Khung giờ",
+      "Tiền thuê phòng (VND)",
+      "Thực đơn & Dịch vụ (VND)",
+      "Giảm giá (VND)",
+      "Tổng doanh thu (VND)"
+    ];
+
+    const rows = filteredBookings.map((b) => {
+      const roomPriceVal = b.roomPrice || 0;
+      const productPriceVal = (b.products || []).reduce((acc, p) => acc + (p.price * p.quantity), 0);
+      const discountVal = b.discountAmount || 0;
+      const timeSlot = `${b.startTime || ""} - ${b.endTime || ""}`;
+
+      return [
+        b.bookingCode || b._id,
+        b.customerId?.fullName || b.userId?.fullName || "Khách vãng lai",
+        b.customerId?.phone || b.userId?.phone || "—",
+        b.customerId?.email || b.userId?.email || "—",
+        b.branchId?.name || "Chi nhánh khác",
+        b.roomId?.roomName || "N/A",
+        new Date(b.bookingDate || b.createdAt).toLocaleDateString("vi-VN"),
+        timeSlot,
+        roomPriceVal,
+        productPriceVal,
+        discountVal,
+        b.finalTotal || 0
+      ];
+    });
+
+    const csvContent = 
+      "\uFEFF" + // UTF-8 BOM to display Vietnamese characters correctly in Excel
+      [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    const filterText = timeFilter === "today" ? "HomNay" : timeFilter === "month" ? "ThangNay" : "TatCa";
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute("download", `CBMS_BaoCao_DoanhThu_${filterText}_${dateStr}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Filter Bookings by Selected Time Filter
   const filteredBookings = useMemo(() => {
     const today = new Date();
@@ -274,7 +338,10 @@ export default function OwnerDashboard() {
 
       {/* ── MAIN ── */}
       <div className="main">
-        <Topbar breadcrumbs={[{ label: "Trang chủ", link: "/owner-dashboard" }, { label: "Doanh thu trực quan" }]} />
+        <Topbar breadcrumbs={[
+          { label: "Trang chủ", link: "/owner-dashboard" }, 
+          { label: active === "revenue" ? "Doanh thu trực quan" : active === "managestaff" ? "Quản lý nhân viên" : active === "promotion" ? "Quản lý khuyến mãi" : "Dashboard" }
+        ]} />
 
         {/* Content */}
         <div className="content">
@@ -284,6 +351,8 @@ export default function OwnerDashboard() {
             ) : (
               <Navigate to="/access-denied" replace />
             )
+          ) : active === "managestaff" ? (
+            <StaffList />
           ) : active === "revenue" ? (
             hasPermission("VIEW_REVENUE") ? (
               <>
@@ -294,52 +363,80 @@ export default function OwnerDashboard() {
                     <p className="pg-sub" style={{ margin: "4px 0 0 0" }}>Phân tích kết quả kinh doanh toàn bộ chuỗi cơ sở Cinema Cafe</p>
                   </div>
 
-                  {/* Time Range Filter Buttons */}
-                  <div style={{ display: "flex", gap: "8px", background: "#ffffff", padding: "6px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  {/* Filter & Export Buttons container */}
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                    {/* Time Range Filter Buttons */}
+                    <div style={{ display: "flex", gap: "8px", background: "#ffffff", padding: "6px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                      <button
+                        style={{
+                          padding: "6px 16px",
+                          borderRadius: "8px",
+                          border: "none",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: timeFilter === "today" ? "#0f766e" : "transparent",
+                          color: timeFilter === "today" ? "#ffffff" : "#64748b",
+                          transition: "all 0.2s"
+                        }}
+                        onClick={() => setTimeFilter("today")}
+                      >
+                        Hôm nay
+                      </button>
+                      <button
+                        style={{
+                          padding: "6px 16px",
+                          borderRadius: "8px",
+                          border: "none",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: timeFilter === "month" ? "#0f766e" : "transparent",
+                          color: timeFilter === "month" ? "#ffffff" : "#64748b",
+                          transition: "all 0.2s"
+                        }}
+                        onClick={() => setTimeFilter("month")}
+                      >
+                        Tháng này
+                      </button>
+                      <button
+                        style={{
+                          padding: "6px 16px",
+                          borderRadius: "8px",
+                          border: "none",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: timeFilter === "all" ? "#0f766e" : "transparent",
+                          color: timeFilter === "all" ? "#ffffff" : "#64748b",
+                          transition: "all 0.2s"
+                        }}
+                        onClick={() => setTimeFilter("all")}
+                      >
+                        Tất cả thời gian
+                      </button>
+                    </div>
+
+                    {/* Export Button */}
                     <button
+                      onClick={handleExportCSV}
                       style={{
-                        padding: "6px 16px",
-                        borderRadius: "8px",
+                        padding: "8px 18px",
+                        borderRadius: "10px",
                         border: "none",
                         fontWeight: 700,
                         cursor: "pointer",
-                        background: timeFilter === "today" ? "#0f766e" : "transparent",
-                        color: timeFilter === "today" ? "#ffffff" : "#64748b",
-                        transition: "all 0.2s"
+                        background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        boxShadow: "0 4px 12px rgba(13, 148, 136, 0.2)",
+                        transition: "all 0.2s",
+                        height: "38px"
                       }}
-                      onClick={() => setTimeFilter("today")}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-1px)"}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = "none"}
                     >
-                      Hôm nay
-                    </button>
-                    <button
-                      style={{
-                        padding: "6px 16px",
-                        borderRadius: "8px",
-                        border: "none",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        background: timeFilter === "month" ? "#0f766e" : "transparent",
-                        color: timeFilter === "month" ? "#ffffff" : "#64748b",
-                        transition: "all 0.2s"
-                      }}
-                      onClick={() => setTimeFilter("month")}
-                    >
-                      Tháng này
-                    </button>
-                    <button
-                      style={{
-                        padding: "6px 16px",
-                        borderRadius: "8px",
-                        border: "none",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        background: timeFilter === "all" ? "#0f766e" : "transparent",
-                        color: timeFilter === "all" ? "#ffffff" : "#64748b",
-                        transition: "all 0.2s"
-                      }}
-                      onClick={() => setTimeFilter("all")}
-                    >
-                      Tất cả thời gian
+                      <i className="ti ti-download" style={{ fontSize: "16px" }} />
+                      Xuất báo cáo (CSV Excel)
                     </button>
                   </div>
                 </div>

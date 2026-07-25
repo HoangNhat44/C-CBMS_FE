@@ -964,11 +964,7 @@ function BookingPage() {
                                 <span className="promo-desc">
                                   {promo.description || `Giảm ${promo.discountType === 'percent' ? `${promo.discountValue}%` : formatCurrency(promo.discountValue)}`}
                                 </span>
-                                {promo.maxUsage !== null && (
-                                  <span className="promo-usage" style={{ color: '#9ca3af', fontSize: '11px' }}>
-                                    Đã dùng: {promo.usedCount}/{promo.maxUsage}
-                                  </span>
-                                )}
+
                               </div>
                               <button
                                 type="button"

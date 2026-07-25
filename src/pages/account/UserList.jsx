@@ -153,29 +153,35 @@ export default function UserList() {
                   <td className="td-muted">{u.email}</td>
                   <td>
                     {/* Inline Role Edit Dropdown */}
-                    <select
-                      value={u.roleId?._id || u.roleId || ""}
-                      onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                      style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--border)", fontSize: 13, cursor: "pointer", textTransform: "capitalize", background: "#fff" }}
-                    >
-                      <option value="" disabled>-- Chọn vai trò --</option>
-                      {rolesList.map((r) => {
-                        const isAllowed = allowedRoles.some(ar => ar._id === r._id);
-                        return (
-                          <option 
-                            key={r._id} 
-                            value={r._id} 
-                            disabled={!isAllowed}
-                          >
-                            {r.name}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    {(u.roleId?.name || "").toLowerCase() === "admin" ? (
+                      <span style={{ textTransform: "capitalize", fontWeight: 600, color: "var(--text-dark)", fontSize: 13 }}>
+                        {u.roleId?.name || "Admin"}
+                      </span>
+                    ) : (
+                      <select
+                        value={u.roleId?._id || u.roleId || ""}
+                        onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                        style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--border)", fontSize: 13, cursor: "pointer", textTransform: "capitalize", background: "#fff" }}
+                      >
+                        <option value="" disabled>-- Chọn vai trò --</option>
+                        {rolesList.map((r) => {
+                          const isAllowed = allowedRoles.some(ar => ar._id === r._id);
+                          return (
+                            <option 
+                              key={r._id} 
+                              value={r._id} 
+                              disabled={!isAllowed}
+                            >
+                              {r.name}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
                   </td>
                   <td><span className={`pill ${statusMap}`}>{statusText}</span></td>
                   <td style={{ textAlign: "right" }}>
-                    {currentUser && currentUser._id !== u._id && (
+                    {currentUser && currentUser._id !== u._id && (u.roleId?.name || "").toLowerCase() !== "admin" && (
                       <button
                         onClick={() => handleToggleState(u._id, u.isActive)}
                         className="btn-outline"
