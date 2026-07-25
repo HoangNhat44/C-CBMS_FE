@@ -19,7 +19,10 @@ export const ownerMenuItems = [
   },
   {
     section: "Đặt phòng",
-    items: [{ icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory", requiredPermission: "VIEW_BOOKING_HISTORY" }],
+    items: [
+      { icon: "ti-calendar-plus", label: "Đặt phòng tại quầy", key: "walkin", badge: "Nhanh" },
+      { icon: "ti-calendar-event", label: "Lịch sử đặt phòng", key: "bookinghistory", requiredPermission: "VIEW_BOOKING_HISTORY" }
+    ],
   },
   {
     section: "Cơ sở vật chất",

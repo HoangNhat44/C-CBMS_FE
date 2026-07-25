@@ -563,6 +563,11 @@ function BookingPage() {
         setTimeout(() => {
           setIsCheckoutOpen(false);
           setBookingMessage("");
+          if (currentUser) {
+            navigate("/bookinghistory");
+          } else {
+            navigate("/landing-dashboard");
+          }
         }, 3000);
       }
     } catch (err) {
@@ -1020,14 +1025,21 @@ function BookingPage() {
       {/* Payment QR Modal */}
       <PaymentQRModal
         isOpen={isQrOpen}
-        onClose={() => setIsQrOpen(false)}
+        onClose={() => {
+          setIsQrOpen(false);
+          // Optional: also redirect on close if they prefer? No, leave it as is to allow them to retry or stay.
+        }}
         qrCode={qrData.qrCode}
         checkoutUrl={qrData.checkoutUrl}
         amount={qrData.amount}
         bookingId={qrData.bookingId}
         onPaymentSuccess={() => {
           setIsQrOpen(false);
-          navigate("/bookinghistory");
+          if (currentUser) {
+            navigate("/bookinghistory");
+          } else {
+            navigate("/landing-dashboard");
+          }
         }}
       />
 
