@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./App.css";
 import BookingPage from "./pages/booking/BookingPage";
 import WalkinBookingPage from "./pages/booking/WalkinBookingPage";
@@ -93,6 +93,26 @@ function GlobalAlert() {
   );
 }
 
+function RootRedirect() {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/landing-dashboard" replace />;
+  }
+
+  const roleName = (user?.role?.name || user?.roleId?.name || user?.role || "").toLowerCase();
+  
+  if (roleName === "admin") {
+    return <Navigate to="/admin-dashboard" replace />;
+  } else if (roleName === "owner") {
+    return <Navigate to="/owner-dashboard" replace />;
+  } else if (roleName === "staff") {
+    return <Navigate to="/staff-dashboard" replace />;
+  }
+  
+  return <Navigate to="/landing-dashboard" replace />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -103,7 +123,7 @@ function App() {
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/walkin" element={<WalkinBookingPage />} />
           <Route path="*" element={<Navigate to="/booking" replace />} />
-          <Route path="/" element={<Navigate to="/landing-dashboard" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
