@@ -227,7 +227,7 @@ export default function OwnerDashboard() {
       ];
     });
 
-    const csvContent = 
+    const csvContent =
       "\uFEFF" + // UTF-8 BOM to display Vietnamese characters correctly in Excel
       [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
 
@@ -235,11 +235,11 @@ export default function OwnerDashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    
+
     const filterText = timeFilter === "today" ? "HomNay" : timeFilter === "month" ? "ThangNay" : "TatCa";
     const dateStr = new Date().toISOString().slice(0, 10);
     link.setAttribute("download", `CBMS_BaoCao_DoanhThu_${filterText}_${dateStr}.csv`);
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -339,7 +339,7 @@ export default function OwnerDashboard() {
       {/* ── MAIN ── */}
       <div className="main">
         <Topbar breadcrumbs={[
-          { label: "Trang chủ", link: "/owner-dashboard" }, 
+          { label: "Trang chủ", link: "/owner-dashboard" },
           { label: active === "revenue" ? "Doanh thu trực quan" : active === "managestaff" ? "Quản lý nhân viên" : active === "promotion" ? "Quản lý khuyến mãi" : "Dashboard" }
         ]} />
 

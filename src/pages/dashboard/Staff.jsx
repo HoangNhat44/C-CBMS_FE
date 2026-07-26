@@ -485,8 +485,8 @@ export default function StaffDashboard() {
                     const today = new Date();
                     const bDate = new Date(b.bookingDate);
                     return today.getFullYear() === bDate.getFullYear() &&
-                           today.getMonth() === bDate.getMonth() &&
-                           today.getDate() === bDate.getDate();
+                      today.getMonth() === bDate.getMonth() &&
+                      today.getDate() === bDate.getDate();
                   }).length}</div>
                 </div>
                 <div className="metric">

@@ -191,7 +191,7 @@ export default function BranchesPage() {
 
   const handleToggleActive = async (branch) => {
     const newStatus = !branch.isActive;
-    const confirmMsg = newStatus 
+    const confirmMsg = newStatus
       ? `Bạn muốn kích hoạt hoạt động lại cho chi nhánh "${branch.name}"?`
       : `Bạn có chắc muốn vô hiệu hóa chi nhánh "${branch.name}"?\n(Nhân viên sẽ không thể đặt phòng tại quầy ở chi nhánh này nữa)`;
 
@@ -230,10 +230,10 @@ export default function BranchesPage() {
 
   // Filtered branches list
   const filteredBranches = branches.filter((branch) => {
-    const matchesSearch = 
+    const matchesSearch =
       branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       branch.address.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     let matchesStatus = true;
     if (statusFilter === "active") matchesStatus = branch.isActive === true;
     if (statusFilter === "inactive") matchesStatus = branch.isActive === false;
